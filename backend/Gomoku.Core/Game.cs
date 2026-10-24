@@ -23,6 +23,8 @@ public sealed class Game
 
     public static Game Start(RuleSet rules, Stone openingStone) => new(rules, openingStone);
 
+    internal GameStatus Status => _status;
+
     public MoveResult TryPlay(Position position)
     {
         if (_status != GameStatus.InProgress)
