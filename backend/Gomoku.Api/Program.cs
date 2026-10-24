@@ -1,9 +1,11 @@
 using Gomoku.Api.Identity;
+using Gomoku.Api.Matches;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHealthChecks();
 builder.AddGomokuIdentity();
+builder.AddGomokuGameFlow();
 
 var app = builder.Build();
 
