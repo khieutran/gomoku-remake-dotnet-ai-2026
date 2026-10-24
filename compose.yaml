@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_DB: gomoku
+      POSTGRES_USER: gomoku
+      POSTGRES_PASSWORD: gomoku_dev
+    ports:
+      - "${GOMOKU_POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - gomoku_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gomoku -d gomoku"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  gomoku_postgres:

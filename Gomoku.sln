@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gomoku.Infrastructure", "ba
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gomoku.Api", "backend\Gomoku.Api\Gomoku.Api.csproj", "{328A893B-E30B-40A3-88E7-5708E258EF22}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gomoku.Infrastructure.Tests", "tests\Gomoku.Infrastructure.Tests\Gomoku.Infrastructure.Tests.csproj", "{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{328A893B-E30B-40A3-88E7-5708E258EF22}.Release|x64.Build.0 = Release|Any CPU
 		{328A893B-E30B-40A3-88E7-5708E258EF22}.Release|x86.ActiveCfg = Release|Any CPU
 		{328A893B-E30B-40A3-88E7-5708E258EF22}.Release|x86.Build.0 = Release|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Debug|x64.Build.0 = Debug|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Debug|x86.Build.0 = Debug|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Release|x64.ActiveCfg = Release|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Release|x64.Build.0 = Release|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Release|x86.ActiveCfg = Release|Any CPU
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,5 +111,6 @@ Global
 		{CD0D0ACB-1FD0-4460-A85A-FEBA8B4EBD94} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{9AEDD82B-FA42-4B42-B11A-038A1F03840E} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{328A893B-E30B-40A3-88E7-5708E258EF22} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{36E825FE-20E1-46FE-B9A1-D0ABD7FAE4CA} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
