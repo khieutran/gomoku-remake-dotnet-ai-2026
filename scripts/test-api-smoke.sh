@@ -30,7 +30,10 @@ if ! "$dotnet_bin" build backend/Gomoku.Api/Gomoku.Api.csproj --nologo > "$log_f
     cat "$log_file" >&2
     exit 1
 fi
-"$dotnet_bin" backend/Gomoku.Api/bin/Debug/net10.0/Gomoku.Api.dll --urls "http://127.0.0.1:$port" >> "$log_file" 2>&1 &
+cd "$repo_root/backend/Gomoku.Api"
+ASPNETCORE_ENVIRONMENT=Development GOMOKU_DP_KEYS_DIR="${TMPDIR:-/tmp}/gomoku-api-smoke-keys" \
+    "$dotnet_bin" bin/Debug/net10.0/Gomoku.Api.dll \
+    --urls "http://127.0.0.1:$port" >> "$log_file" 2>&1 &
 server_pid=$!
 
 cleanup() {

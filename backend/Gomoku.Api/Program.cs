@@ -1,17 +1,21 @@
-using Gomoku.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
+using Gomoku.Api.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHealthChecks();
-var connectionString = builder.Configuration.GetConnectionString("Gomoku");
-if (!string.IsNullOrWhiteSpace(connectionString))
-{
-    builder.Services.AddDbContext<GomokuDbContext>(options => options.UseNpgsql(connectionString));
-}
+builder.AddGomokuIdentity();
 
 var app = builder.Build();
 
+app.UseStorageFailureHandler();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseApiAntiforgery();
+
 app.MapHealthChecks("/health");
+app.MapAuthEndpoints();
+app.MapGuestSessionEndpoints();
 
 app.Run();
+
+public partial class Program;

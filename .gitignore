@@ -4,6 +4,7 @@ docs/
 bin/
 obj/
 .vs/
+.keys/
 TestResults/
 *.user
 *.suo
