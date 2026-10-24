@@ -36,6 +36,6 @@ public sealed class Board
 
     public BoardSnapshot Snapshot() => new(_cells);
 
-    private bool Contains(Position position) =>
+    internal bool Contains(Position position) =>
         position.Row >= 0 && position.Row < Size && position.Column >= 0 && position.Column < Size;
 }
