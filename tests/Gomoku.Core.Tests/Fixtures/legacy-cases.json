@@ -1,0 +1,1095 @@
+{
+  "schemaVersion": 1,
+  "ruleVersion": "gomoku-exact-five-v1",
+  "games": [
+    {
+      "id": "FOUR",
+      "source": "product-decision",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 7,
+      "expectedStatus": "InProgress",
+      "expectedNextStone": "O"
+    },
+    {
+      "id": "WIN-H",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 11,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "WIN-O",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "O",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "O"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "X"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "O"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "X"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 9,
+          "stone": "O"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "X"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "O"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 6,
+          "stone": "X"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 11,
+          "stone": "O"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "OWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "BLOCK-2",
+      "source": "intentional-difference",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 10,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 10,
+          "column": 12,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 11,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "InProgress",
+      "expectedNextStone": "O"
+    },
+    {
+      "id": "SIX-GAP",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 11,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 12,
+          "stone": "X"
+        },
+        {
+          "step": 10,
+          "row": 0,
+          "column": 8,
+          "stone": "O"
+        },
+        {
+          "step": 11,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 11,
+      "expectedStatus": "InProgress",
+      "expectedNextStone": "O"
+    },
+    {
+      "id": "EDGE-L",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 0,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 10,
+          "column": 5,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 1,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 2,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 3,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 4,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "DRAW-5",
+      "source": "product-decision",
+      "boardSize": 5,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 0,
+          "column": 1,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 0,
+          "column": 3,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 1,
+          "column": 0,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 1,
+          "column": 2,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 1,
+          "column": 1,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 1,
+          "column": 4,
+          "stone": "X"
+        },
+        {
+          "step": 10,
+          "row": 1,
+          "column": 3,
+          "stone": "O"
+        },
+        {
+          "step": 11,
+          "row": 2,
+          "column": 1,
+          "stone": "X"
+        },
+        {
+          "step": 12,
+          "row": 2,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 13,
+          "row": 2,
+          "column": 3,
+          "stone": "X"
+        },
+        {
+          "step": 14,
+          "row": 2,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 15,
+          "row": 3,
+          "column": 0,
+          "stone": "X"
+        },
+        {
+          "step": 16,
+          "row": 3,
+          "column": 1,
+          "stone": "O"
+        },
+        {
+          "step": 17,
+          "row": 3,
+          "column": 2,
+          "stone": "X"
+        },
+        {
+          "step": 18,
+          "row": 3,
+          "column": 3,
+          "stone": "O"
+        },
+        {
+          "step": 19,
+          "row": 3,
+          "column": 4,
+          "stone": "X"
+        },
+        {
+          "step": 20,
+          "row": 4,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 21,
+          "row": 4,
+          "column": 1,
+          "stone": "X"
+        },
+        {
+          "step": 22,
+          "row": 4,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 23,
+          "row": 4,
+          "column": 3,
+          "stone": "X"
+        },
+        {
+          "step": 24,
+          "row": 4,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 25,
+          "row": 2,
+          "column": 2,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 25,
+      "expectedStatus": "Draw",
+      "expectedNextStone": null
+    },
+    {
+      "id": "WIN-V",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 7,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 8,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 9,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 11,
+          "column": 10,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "WIN-D1",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 7,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 8,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 9,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 11,
+          "column": 11,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "WIN-D2",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 7,
+          "column": 11,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 8,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 9,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 11,
+          "column": 7,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "BLOCK-1",
+      "source": "product-decision",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 10,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 11,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "BLOCK-GAP",
+      "source": "product-decision",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 7,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 10,
+          "column": 5,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 10,
+          "column": 13,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 11,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "EDGE-R",
+      "source": "legacy-observed",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 19,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 10,
+          "column": 14,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 10,
+          "column": 18,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 17,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 10,
+          "column": 16,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 15,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 9,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    },
+    {
+      "id": "TWO-LINES",
+      "source": "product-decision",
+      "boardSize": 20,
+      "openingStone": "X",
+      "moves": [
+        {
+          "step": 1,
+          "row": 10,
+          "column": 8,
+          "stone": "X"
+        },
+        {
+          "step": 2,
+          "row": 10,
+          "column": 7,
+          "stone": "O"
+        },
+        {
+          "step": 3,
+          "row": 8,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 4,
+          "row": 10,
+          "column": 13,
+          "stone": "O"
+        },
+        {
+          "step": 5,
+          "row": 10,
+          "column": 9,
+          "stone": "X"
+        },
+        {
+          "step": 6,
+          "row": 0,
+          "column": 0,
+          "stone": "O"
+        },
+        {
+          "step": 7,
+          "row": 9,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 8,
+          "row": 0,
+          "column": 2,
+          "stone": "O"
+        },
+        {
+          "step": 9,
+          "row": 10,
+          "column": 11,
+          "stone": "X"
+        },
+        {
+          "step": 10,
+          "row": 0,
+          "column": 4,
+          "stone": "O"
+        },
+        {
+          "step": 11,
+          "row": 11,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 12,
+          "row": 0,
+          "column": 6,
+          "stone": "O"
+        },
+        {
+          "step": 13,
+          "row": 10,
+          "column": 12,
+          "stone": "X"
+        },
+        {
+          "step": 14,
+          "row": 0,
+          "column": 8,
+          "stone": "O"
+        },
+        {
+          "step": 15,
+          "row": 12,
+          "column": 10,
+          "stone": "X"
+        },
+        {
+          "step": 16,
+          "row": 0,
+          "column": 10,
+          "stone": "O"
+        },
+        {
+          "step": 17,
+          "row": 10,
+          "column": 10,
+          "stone": "X"
+        }
+      ],
+      "expectedMoveIndex": 17,
+      "expectedStatus": "XWon",
+      "expectedNextStone": null
+    }
+  ],
+  "matches": [
+    {
+      "id": "MATCH-X-O",
+      "boardSize": 20,
+      "gameIds": [
+        "WIN-H",
+        "WIN-O"
+      ],
+      "expectedScores": [
+        {
+          "x": 3,
+          "o": 0
+        },
+        {
+          "x": 3,
+          "o": 3
+        }
+      ],
+      "expectedNextOpening": "X"
+    },
+    {
+      "id": "MATCH-DRAW",
+      "boardSize": 5,
+      "gameIds": [
+        "DRAW-5"
+      ],
+      "expectedScores": [
+        {
+          "x": 1,
+          "o": 1
+        }
+      ],
+      "expectedNextOpening": "O"
+    }
+  ]
+}

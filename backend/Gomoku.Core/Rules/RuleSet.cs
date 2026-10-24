@@ -2,6 +2,8 @@ namespace Gomoku.Core;
 
 public sealed class RuleSet
 {
+    public const string CurrentVersion = "gomoku-exact-five-v1";
+
     public RuleSet(int boardSize)
     {
         if (boardSize < 5)
@@ -13,4 +15,6 @@ public sealed class RuleSet
     }
 
     public int BoardSize { get; }
+
+    public string Version => CurrentVersion;
 }

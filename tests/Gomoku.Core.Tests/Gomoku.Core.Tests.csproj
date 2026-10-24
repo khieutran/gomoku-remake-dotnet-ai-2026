@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\backend\Gomoku.Core\Gomoku.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fixtures/legacy-cases.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

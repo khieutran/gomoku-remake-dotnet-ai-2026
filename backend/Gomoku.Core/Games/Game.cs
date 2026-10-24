@@ -55,6 +55,7 @@ public sealed class Game
 
     public GameSnapshot Snapshot() => new(
         _board.Snapshot(),
+        _rules,
         _status,
         _status == GameStatus.InProgress ? _nextStone : null,
         Array.AsReadOnly(_moves.ToArray()));
