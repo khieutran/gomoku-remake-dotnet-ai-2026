@@ -17,6 +17,7 @@ app.UseApiAntiforgery();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapGuestSessionEndpoints();
+app.MapMatchEndpoints();
 
 app.Run();
 
