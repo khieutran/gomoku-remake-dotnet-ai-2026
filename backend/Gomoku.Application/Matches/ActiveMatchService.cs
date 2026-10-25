@@ -4,14 +4,18 @@ namespace Gomoku.Application.Matches;
 
 public sealed class ActiveMatchService(IActiveMatchReader reader)
 {
-    public async Task<ActiveMatchPage> ListAsync(OwnerIdentity owner, int offset, int limit,
+    public async Task<ActiveMatchPage> ListAsync(OwnerIdentity owner, ActiveMatchCursor? cursor, int limit,
         CancellationToken cancellationToken = default)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
         ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 50);
-        var rows = await reader.ReadAsync(owner, offset, limit + 1, cancellationToken);
-        return new ActiveMatchPage(rows.Take(limit).ToArray(),
-            rows.Count > limit ? offset + limit : null);
+        if (cursor is { } point && (point.Scope != owner.Scope || point.OwnerId != owner.Id))
+            throw new ArgumentException("Cursor owner does not match.", nameof(cursor));
+        var rows = await reader.ReadAsync(owner, cursor, limit + 1, cancellationToken);
+        var items = rows.Take(limit).ToArray();
+        var nextCursor = rows.Count > limit
+            ? new ActiveMatchCursor(owner.Scope, owner.Id, items[^1].CreatedAt, items[^1].MatchId).Encode()
+            : null;
+        return new ActiveMatchPage(items, nextCursor);
     }
 }
