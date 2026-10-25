@@ -6,12 +6,32 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Gomoku.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.TestHost;
 using Xunit;
 
 namespace Gomoku.Api.Tests.Identity;
 
 public sealed class IdentityHttpTests
 {
+    private sealed class RegistrationBarrierValidator : IUserValidator<ApplicationUser>
+    {
+        private readonly TaskCompletionSource _bothValidated = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _validated;
+
+        public async Task<IdentityResult> ValidateAsync(UserManager<ApplicationUser> manager,
+            ApplicationUser user)
+        {
+            if (Interlocked.Increment(ref _validated) == 2)
+            {
+                _bothValidated.TrySetResult();
+            }
+
+            await _bothValidated.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            return IdentityResult.Success;
+        }
+    }
+
     private static WebApplicationFactory<Program> OpenFactory()
     {
         var connectionString = Environment.GetEnvironmentVariable("GOMOKU_TEST_POSTGRES")
@@ -31,6 +51,37 @@ public sealed class IdentityHttpTests
             request.Content = JsonContent.Create(body);
         }
         return await client.SendAsync(request);
+    }
+
+    [Fact]
+    public async Task ConcurrentRegistrationOfSameNormalizedEmailCreatesOneAccount()
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var email = $"task6-{Guid.NewGuid():N}@example.test";
+            using var factory = OpenFactory().WithWebHostBuilder(builder =>
+                builder.ConfigureTestServices(services =>
+                    services.AddSingleton<IUserValidator<ApplicationUser>>(new RegistrationBarrierValidator())));
+            using var firstClient = factory.CreateClient();
+            using var secondClient = factory.CreateClient();
+
+            var first = PostAsync(firstClient, "/api/v1/auth/register",
+                new { email, password = "StrongPass!123" });
+            var second = PostAsync(secondClient, "/api/v1/auth/register",
+                new { email = email.ToUpperInvariant(), password = "StrongPass!123" });
+            using var firstResponse = await first;
+            using var secondResponse = await second;
+
+            Assert.Equal(new[] { HttpStatusCode.Created, HttpStatusCode.Conflict },
+                new[] { firstResponse.StatusCode, secondResponse.StatusCode }.Order());
+            var conflict = firstResponse.StatusCode == HttpStatusCode.Conflict ? firstResponse : secondResponse;
+            var error = await conflict.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal("account_exists", error.GetProperty("code").GetString());
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<GomokuDbContext>();
+            Assert.Equal(1, await db.Users.CountAsync(user => user.NormalizedUserName == email.ToUpperInvariant()));
+        }
     }
 
     [Fact]
@@ -182,6 +233,34 @@ public sealed class IdentityHttpTests
         var error = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("validation_error", error.GetProperty("code").GetString());
         Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("traceId").GetString()));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-an-email")]
+    public async Task InvalidRegistrationEmailReturnsValidationError(string email)
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var response = await PostAsync(client, "/api/v1/auth/register",
+            new { email, password = "StrongPass!123" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_error", error.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task RegistrationDatabaseFailureReturnsStorageUnavailable()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            builder.UseSetting("ConnectionStrings:Gomoku",
+                "Host=127.0.0.1;Port=1;Database=gomoku;Username=missing;Timeout=1"));
+        using var client = factory.CreateClient();
+        using var response = await PostAsync(client, "/api/v1/auth/register",
+            new { email = $"task6-{Guid.NewGuid():N}@example.test", password = "StrongPass!123" });
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("storage_unavailable", error.GetProperty("code").GetString());
     }
 
     [Fact]
