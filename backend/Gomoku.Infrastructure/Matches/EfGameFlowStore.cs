@@ -26,12 +26,13 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
         var moves = await db.Moves.AsNoTracking().Where(x => gameIds.Contains(x.GameId))
             .OrderBy(x => x.Step).ToListAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        var movesByGame = moves.ToLookup(move => move.GameId);
 
         return new MatchRecord(match.Id, owner, match.RuleVersion, match.BoardSize,
             match.XScore, match.OScore, match.CurrentGameId ?? Guid.Empty, match.Revision,
             games.Select(game => new GameRecord(game.Id, game.Number, game.OpeningStone,
                 game.RuleStatus, (GameRecordState)game.State,
-                moves.Where(move => move.GameId == game.Id)
+                movesByGame[game.Id]
                     .Select(move => new MoveRecord(move.Step, move.Row, move.Column,
                         move.Stone, (PlayerActor)move.Actor)).ToArray())).ToArray());
     }
