@@ -1,0 +1,14 @@
+.git
+.codegraph
+.agents
+.codex
+.aws
+docs
+node_modules
+**/bin
+**/obj
+**/TestResults
+**/.keys
+.env
+.env.*
+!.env.example

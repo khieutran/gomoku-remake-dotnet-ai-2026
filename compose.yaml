@@ -4,9 +4,9 @@ services:
     environment:
       POSTGRES_DB: gomoku
       POSTGRES_USER: gomoku
-      POSTGRES_PASSWORD: gomoku_dev
+      POSTGRES_PASSWORD: ${GOMOKU_POSTGRES_PASSWORD:-gomoku_dev}
     ports:
-      - "${GOMOKU_POSTGRES_PORT:-55432}:5432"
+      - "127.0.0.1:${GOMOKU_POSTGRES_PORT:-55432}:5432"
     volumes:
       - gomoku_postgres:/var/lib/postgresql/data
     healthcheck:
@@ -28,5 +28,40 @@ services:
       retries: 20
       start_period: 5s
 
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Gomoku.Api/Dockerfile
+    image: gomoku-api:local
+    entrypoint: ["/app/efbundle"]
+    environment:
+      GOMOKU_POSTGRES_CONNECTION: "Host=postgres;Port=5432;Database=gomoku;Username=gomoku;Password=${GOMOKU_POSTGRES_PASSWORD:-gomoku_dev}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: gomoku-api:local
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${GOMOKU_ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Gomoku: "Host=postgres;Port=5432;Database=gomoku;Username=gomoku;Password=${GOMOKU_POSTGRES_PASSWORD:-gomoku_dev}"
+      ConnectionStrings__Redis: "redis:6379,abortConnect=false,connectTimeout=500,asyncTimeout=500"
+      GOMOKU_DP_KEYS_DIR: /app/keys
+    ports:
+      - "127.0.0.1:${GOMOKU_API_PORT:-58080}:8080"
+    volumes:
+      - gomoku_keys:/app/keys
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 10s
+
 volumes:
   gomoku_postgres:
+  gomoku_keys:
