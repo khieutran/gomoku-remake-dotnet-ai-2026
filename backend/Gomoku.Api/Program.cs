@@ -7,6 +7,7 @@ using Gomoku.Api.Redis;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHealthChecks();
+builder.AddAnonymousRateLimiting();
 builder.AddGomokuRedisKeyspace();
 builder.AddGomokuIdentity();
 builder.AddGomokuGameFlow();
@@ -16,9 +17,11 @@ builder.AddGomokuRanking();
 var app = builder.Build();
 
 app.UseStorageFailureHandler();
+app.UseKnownProxyForwarding();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseApiAntiforgery();
+app.UseRateLimiter();
 
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
