@@ -50,9 +50,15 @@ public sealed class RedisRankingProjection(IConnectionMultiplexer connection, Re
         if (!await IsReadyAsync(cancellationToken)) return null;
         try
         {
-            var rows = await connection.GetDatabase()
+            var db = connection.GetDatabase();
+            var rows = await db
                 .SortedSetRangeByRankWithScoresAsync(BoardKey, 0, limit - 1, Order.Descending)
                 .WaitAsync(Timeout, cancellationToken);
+            if (rows.Length == 0)
+            {
+                var marker = await db.StringGetAsync(ReadyKey).WaitAsync(Timeout, cancellationToken);
+                if (marker.ToString() != "0") return null;
+            }
             return rows.Select(row => new RankingScore(Guid.Parse(row.Element.ToString()),
                 checked((int)row.Score))).ToArray();
         }
