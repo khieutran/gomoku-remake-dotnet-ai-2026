@@ -184,6 +184,46 @@ public sealed class MatchHttpTests
     }
 
     [Fact]
+    public async Task ActiveMatchListLetsAccountResumeAfterLoginWithoutLeakingGuestMatch()
+    {
+        using var factory = OpenFactory();
+        using var first = factory.CreateClient();
+        var email = $"resume-{Guid.NewGuid():N}@example.test";
+        using var register = await PostAsync(first, "/api/v1/auth/register",
+            new { email, password = "StrongPass!123" });
+        using var accountMatch = await PostAsync(first, "/api/v1/matches?scope=account",
+            new { commandId = "account-resume-" + Guid.NewGuid() });
+        var accountId = (await accountMatch.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("matchId").GetGuid();
+        using var guest = await PostAsync(first, "/api/v1/guest-sessions");
+        using var guestMatch = await PostAsync(first, "/api/v1/matches?scope=guest",
+            new { commandId = "guest-resume-" + Guid.NewGuid() });
+        var guestId = (await guestMatch.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("matchId").GetGuid();
+
+        using var second = factory.CreateClient();
+        using var noCookie = await second.GetAsync("/api/v1/matches/active?scope=account");
+        Assert.Equal(HttpStatusCode.Unauthorized, noCookie.StatusCode);
+        using var login = await PostAsync(second, "/api/v1/auth/login",
+            new { email, password = "StrongPass!123" });
+        using var accountList = await second.GetAsync("/api/v1/matches/active?scope=account");
+        Assert.Equal(HttpStatusCode.OK, accountList.StatusCode);
+        var accountItems = (await accountList.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(accountItems, x => x.GetProperty("matchId").GetGuid() == accountId);
+        Assert.DoesNotContain(accountItems, x => x.GetProperty("matchId").GetGuid() == guestId);
+        using var noGuestCookie = await second.GetAsync("/api/v1/matches/active?scope=guest");
+        Assert.Equal(HttpStatusCode.Unauthorized, noGuestCookie.StatusCode);
+
+        using var guestList = await first.GetAsync("/api/v1/matches/active?scope=guest");
+        Assert.Equal(HttpStatusCode.OK, guestList.StatusCode);
+        var guestItems = (await guestList.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(guestItems, x => x.GetProperty("matchId").GetGuid() == guestId);
+        Assert.DoesNotContain(guestItems, x => x.GetProperty("matchId").GetGuid() == accountId);
+    }
+
+    [Fact]
     public async Task CreateRejectsFieldsItDoesNotUnderstand()
     {
         using var factory = OpenFactory();

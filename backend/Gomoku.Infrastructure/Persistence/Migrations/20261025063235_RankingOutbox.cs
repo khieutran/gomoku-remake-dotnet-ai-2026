@@ -59,6 +59,25 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                 table: "AspNetUsers",
                 sql: "\"RankingPoints\" >= 0 AND \"RankingGames\" >= 0");
 
+            migrationBuilder.Sql("""
+                UPDATE "AspNetUsers" AS account
+                SET "RankingGames" = totals.games,
+                    "RankingPoints" = totals.points
+                FROM (
+                    SELECT match."UserId" AS account_id,
+                           COUNT(*)::integer AS games,
+                           SUM(CASE game."RuleStatus"
+                               WHEN 'XWon' THEN 3
+                               WHEN 'Draw' THEN 1
+                               ELSE 0 END)::integer AS points
+                    FROM "Games" AS game
+                    JOIN "Matches" AS match ON match."Id" = game."MatchId"
+                    WHERE match."UserId" IS NOT NULL AND game."State" = 'Finished'
+                    GROUP BY match."UserId"
+                ) AS totals
+                WHERE account."Id" = totals.account_id;
+                """);
+
             migrationBuilder.CreateIndex(
                 name: "IX_RankingOutbox_GameId",
                 table: "RankingOutbox",

@@ -9,5 +9,7 @@ public static class GameFlowSetup
     {
         builder.Services.AddScoped<IGameFlowStore, EfGameFlowStore>();
         builder.Services.AddScoped<GameFlowService>();
+        builder.Services.AddScoped<IActiveMatchReader, EfActiveMatchReader>();
+        builder.Services.AddScoped<ActiveMatchService>();
     }
 }

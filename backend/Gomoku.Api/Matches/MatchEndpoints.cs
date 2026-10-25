@@ -10,6 +10,25 @@ public static class MatchEndpoints
     {
         var group = app.MapGroup("/api/v1/matches");
 
+        group.MapGet("/active", async (HttpContext context, CurrentOwnerService owners,
+            ActiveMatchService active) =>
+        {
+            var scope = GetScope(context);
+            if (scope is not null && scope is not ("account" or "guest"))
+                return ValidationError(context, "Scope must be account or guest.");
+            var limit = 20;
+            if (context.Request.Query.TryGetValue("limit", out var rawLimit) &&
+                (!int.TryParse(rawLimit.ToString(), out limit) || limit is < 1 or > 50))
+                return ValidationError(context, "Limit must be between 1 and 50.");
+            var offset = 0;
+            if (context.Request.Query.TryGetValue("offset", out var rawOffset) &&
+                (!int.TryParse(rawOffset.ToString(), out offset) || offset is < 0 or > 10000))
+                return ValidationError(context, "Offset must be between 0 and 10000.");
+            var owner = await owners.ResolveAsync(context, scope, context.RequestAborted);
+            if (owner is null) return AuthenticationError(context);
+            return Results.Ok(await active.ListAsync(owner.Value, offset, limit, context.RequestAborted));
+        });
+
         group.MapPost("", async (HttpContext context, CurrentOwnerService owners,
             GameFlowService gameFlow, ILoggerFactory loggerFactory) =>
         {

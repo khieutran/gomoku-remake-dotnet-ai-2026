@@ -18,7 +18,7 @@ services:
 
   redis:
     image: redis:8.2-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
     ports:
       - "127.0.0.1:${GOMOKU_REDIS_PORT:-56379}:6379"
     healthcheck:

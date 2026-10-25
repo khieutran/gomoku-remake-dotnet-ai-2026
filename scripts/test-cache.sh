@@ -59,5 +59,4 @@ docker compose up -d --wait redis
 
 redis_port="${GOMOKU_REDIS_PORT:-56379}"
 export GOMOKU_TEST_REDIS="127.0.0.1:$redis_port,abortConnect=false,connectTimeout=500,asyncTimeout=500"
-export ConnectionStrings__Redis="$GOMOKU_TEST_REDIS"
 bash scripts/test-identity.sh verify
