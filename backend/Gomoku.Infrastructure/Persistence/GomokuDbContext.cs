@@ -54,14 +54,15 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
             match.Property(x => x.GuestSessionId).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.RuleVersion).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.BoardSize).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
+            match.Property(x => x.CreatedAt).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             match.HasOne<GuestSession>().WithMany().HasForeignKey(x => x.GuestSessionId).OnDelete(DeleteBehavior.Restrict);
             match.HasOne<StoredGame>().WithMany()
                 .HasForeignKey(x => new { x.CurrentGameId, x.Id })
                 .HasPrincipalKey(x => new { x.Id, x.MatchId })
                 .OnDelete(DeleteBehavior.Restrict);
-            match.HasIndex(x => new { x.UserId, x.CreatedAt });
-            match.HasIndex(x => new { x.GuestSessionId, x.CreatedAt });
+            match.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id }).IsDescending(false, true, true);
+            match.HasIndex(x => new { x.GuestSessionId, x.CreatedAt, x.Id }).IsDescending(false, true, true);
         });
 
         builder.Entity<StoredGame>(game =>

@@ -332,9 +332,11 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CurrentGameId", "Id");
 
-                    b.HasIndex("GuestSessionId", "CreatedAt");
+                    b.HasIndex("GuestSessionId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
 
-                    b.HasIndex("UserId", "CreatedAt");
+                    b.HasIndex("UserId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
 
                     b.ToTable("Matches", null, t =>
                         {
