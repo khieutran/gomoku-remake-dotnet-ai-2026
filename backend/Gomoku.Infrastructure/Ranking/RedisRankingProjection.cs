@@ -1,14 +1,15 @@
 using Gomoku.Application.Ranking;
 using Microsoft.Extensions.Logging;
+using Gomoku.Infrastructure.Redis;
 using StackExchange.Redis;
 
 namespace Gomoku.Infrastructure.Ranking;
 
-public sealed class RedisRankingProjection(IConnectionMultiplexer connection,
+public sealed class RedisRankingProjection(IConnectionMultiplexer connection, RedisKeyspace keyspace,
     ILogger<RedisRankingProjection> logger) : IRankingProjection
 {
-    private const string BoardKey = "gomoku:ranking:v1:alltime";
-    private const string ReadyKey = "gomoku:ranking:v1:ready";
+    private string BoardKey => keyspace.Key("ranking:v1:alltime");
+    private string ReadyKey => keyspace.Key("ranking:v1:ready");
     private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(750);
 
     public async Task<bool> IsReadyAsync(CancellationToken cancellationToken = default)

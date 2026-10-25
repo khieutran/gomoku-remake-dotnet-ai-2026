@@ -47,6 +47,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${GOMOKU_ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__Gomoku: "Host=postgres;Port=5432;Database=gomoku;Username=gomoku;Password=${GOMOKU_POSTGRES_PASSWORD:-gomoku_dev}"
       ConnectionStrings__Redis: "redis:6379,abortConnect=false,connectTimeout=500,asyncTimeout=500"
+      GOMOKU_REDIS_NAMESPACE: ${GOMOKU_REDIS_NAMESPACE:-gomoku:local}
       GOMOKU_DP_KEYS_DIR: /app/keys
     ports:
       - "127.0.0.1:${GOMOKU_API_PORT:-58080}:8080"

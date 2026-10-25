@@ -1,5 +1,7 @@
 using Gomoku.Application.History;
 using Gomoku.Infrastructure.History;
+using Gomoku.Infrastructure.Redis;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 
 namespace Gomoku.Api.History;
 
@@ -19,8 +21,10 @@ public static class HistorySetup
             builder.Services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = redis;
-                options.InstanceName = "gomoku:";
             });
+            builder.Services.AddOptions<RedisCacheOptions>()
+                .Configure<RedisKeyspace>((options, keyspace) =>
+                    options.InstanceName = $"{keyspace.Value}:");
             builder.Services.AddScoped<IHistoryCache, RedisHistoryCache>();
         }
     }
