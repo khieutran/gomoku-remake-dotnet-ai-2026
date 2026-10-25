@@ -46,7 +46,7 @@ public static class AuthEndpoints
 
             await signIn.SignInAsync(user, isPersistent: false);
             return Results.Created("/api/v1/auth/me", new { userId = user.Id, email = user.Email });
-        });
+        }).RequireRateLimiting(AnonymousRateLimiting.Register);
 
         group.MapPost("/login", async (HttpContext context, LoginRequest request,
             UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) =>
@@ -67,7 +67,7 @@ public static class AuthEndpoints
             }
 
             return Results.Ok(new { userId = user.Id, email = user.Email });
-        });
+        }).RequireRateLimiting(AnonymousRateLimiting.Login);
 
         group.MapPost("/logout", async (SignInManager<ApplicationUser> signIn) =>
         {
