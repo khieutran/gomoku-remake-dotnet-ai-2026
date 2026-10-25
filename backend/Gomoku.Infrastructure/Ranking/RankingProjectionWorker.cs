@@ -12,48 +12,80 @@ public sealed class RankingProjectionWorker(IServiceScopeFactory scopes,
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var consecutiveFailures = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
+            var succeeded = false;
             try
             {
-                await UpdateAsync(stoppingToken);
+                succeeded = await UpdateAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception exception)
             {
                 logger.LogWarning(exception, "Ranking projection pass failed; will retry");
             }
-            try { await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken); }
+            consecutiveFailures = succeeded ? 0 : Math.Min(consecutiveFailures + 1, 6);
+            var delay = succeeded
+                ? TimeSpan.FromSeconds(1)
+                : TimeSpan.FromSeconds(Math.Min(30,
+                    Math.Pow(2, consecutiveFailures - 1) + Random.Shared.NextDouble()));
+            try { await Task.Delay(delay, stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
         }
     }
 
-    private async Task UpdateAsync(CancellationToken cancellationToken)
+    private async Task<bool> UpdateAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopes.CreateAsyncScope();
-        var reader = scope.ServiceProvider.GetRequiredService<IRankingReader>();
         var projection = scope.ServiceProvider.GetRequiredService<IRankingProjection>();
+        if (!await projection.IsAvailableAsync(cancellationToken)) return false;
+
+        var reader = scope.ServiceProvider.GetRequiredService<IRankingReader>();
         var db = scope.ServiceProvider.GetRequiredService<GomokuDbContext>();
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var ownsProjection = await db.Database.SqlQueryRaw<bool>(
-            "SELECT pg_try_advisory_xact_lock(773982431234) AS \"Value\"")
-            .SingleAsync(cancellationToken);
-        if (!ownsProjection) return;
-
-        if (!await projection.IsReadyAsync(cancellationToken) &&
-            !await projection.RebuildAsync(await reader.ReadAllAsync(cancellationToken), cancellationToken))
-            return;
-
-        var pending = await db.RankingOutbox.AsNoTracking().Where(x => x.PublishedAt == null)
-            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(100)
-            .ToListAsync(cancellationToken);
-        foreach (var item in pending)
+        await db.Database.OpenConnectionAsync(cancellationToken);
+        var ownsProjection = false;
+        try
         {
-            if (!await projection.PublishAsync(item.UserId, item.Points, cancellationToken)) break;
-            await db.RankingOutbox.Where(x => x.Id == item.Id && x.PublishedAt == null)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.PublishedAt, clock.GetUtcNow()), cancellationToken);
+            ownsProjection = await db.Database.SqlQueryRaw<bool>(
+                "SELECT pg_try_advisory_lock(773982431234) AS \"Value\"")
+                .SingleAsync(cancellationToken);
+            if (!ownsProjection) return true;
+
+            if (!await projection.IsReadyAsync(cancellationToken) &&
+                !await projection.RebuildAsync(await reader.ReadAllAsync(cancellationToken), cancellationToken))
+                return false;
+
+            var pending = await db.RankingOutbox.AsNoTracking().Where(x => x.PublishedAt == null)
+                .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(100)
+                .ToListAsync(cancellationToken);
+            var publishedAll = true;
+            foreach (var item in pending)
+            {
+                if (!await projection.PublishAsync(item.UserId, item.Points, cancellationToken))
+                {
+                    publishedAll = false;
+                    break;
+                }
+                await db.RankingOutbox.Where(x => x.Id == item.Id && x.PublishedAt == null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.PublishedAt, clock.GetUtcNow()), cancellationToken);
+            }
+            return publishedAll;
         }
-        await transaction.CommitAsync(cancellationToken);
+        finally
+        {
+            try
+            {
+                if (ownsProjection)
+                    await db.Database.SqlQueryRaw<bool>(
+                        "SELECT pg_advisory_unlock(773982431234) AS \"Value\"")
+                        .SingleAsync(CancellationToken.None);
+            }
+            finally
+            {
+                await db.Database.CloseConnectionAsync();
+            }
+        }
     }
 }

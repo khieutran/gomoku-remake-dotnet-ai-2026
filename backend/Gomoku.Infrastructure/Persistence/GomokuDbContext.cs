@@ -24,6 +24,9 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
             user.Property(x => x.HistoryRevision).HasDefaultValue(0);
             user.Property(x => x.RankingPoints).HasDefaultValue(0);
             user.Property(x => x.RankingGames).HasDefaultValue(0);
+            user.HasIndex(x => new { x.RankingPoints, x.Id })
+                .IsDescending()
+                .HasFilter("\"RankingGames\" > 0");
             user.ToTable(table => table.HasCheckConstraint("CK_User_HistoryRevision", "\"HistoryRevision\" >= 0"));
             user.ToTable(table => table.HasCheckConstraint("CK_User_Ranking", "\"RankingPoints\" >= 0 AND \"RankingGames\" >= 0"));
         });

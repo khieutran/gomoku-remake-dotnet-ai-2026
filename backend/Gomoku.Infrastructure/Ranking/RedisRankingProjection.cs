@@ -12,6 +12,21 @@ public sealed class RedisRankingProjection(IConnectionMultiplexer connection, Re
     private string ReadyKey => keyspace.Key("ranking:v1:ready");
     private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(750);
 
+    public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await connection.GetDatabase().PingAsync().WaitAsync(Timeout, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Redis is unavailable for ranking projection");
+            return false;
+        }
+    }
+
     public async Task<bool> IsReadyAsync(CancellationToken cancellationToken = default)
     {
         try
