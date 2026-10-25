@@ -13,6 +13,7 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
     public DbSet<StoredGame> Games => Set<StoredGame>();
     public DbSet<StoredMove> Moves => Set<StoredMove>();
     public DbSet<CommandReceipt> CommandReceipts => Set<CommandReceipt>();
+    public DbSet<RankingOutbox> RankingOutbox => Set<RankingOutbox>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -21,7 +22,10 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
         builder.Entity<ApplicationUser>(user =>
         {
             user.Property(x => x.HistoryRevision).HasDefaultValue(0);
+            user.Property(x => x.RankingPoints).HasDefaultValue(0);
+            user.Property(x => x.RankingGames).HasDefaultValue(0);
             user.ToTable(table => table.HasCheckConstraint("CK_User_HistoryRevision", "\"HistoryRevision\" >= 0"));
+            user.ToTable(table => table.HasCheckConstraint("CK_User_Ranking", "\"RankingPoints\" >= 0 AND \"RankingGames\" >= 0"));
         });
 
         builder.Entity<GuestSession>(guest =>
@@ -106,6 +110,19 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
             receipt.HasOne<StoredMatch>().WithMany().HasForeignKey(x => x.MatchId).OnDelete(DeleteBehavior.Restrict);
             receipt.HasIndex(x => new { x.UserId, x.CommandId }).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
             receipt.HasIndex(x => new { x.GuestSessionId, x.CommandId }).IsUnique().HasFilter("\"GuestSessionId\" IS NOT NULL");
+        });
+
+        builder.Entity<RankingOutbox>(ranking =>
+        {
+            ranking.ToTable("RankingOutbox", table =>
+                table.HasCheckConstraint("CK_RankingOutbox_Points", "\"Points\" >= 0"));
+            ranking.HasKey(x => x.Id);
+            ranking.HasIndex(x => x.GameId).IsUnique();
+            ranking.HasIndex(x => new { x.PublishedAt, x.CreatedAt });
+            ranking.HasOne<StoredGame>().WithMany().HasForeignKey(x => x.GameId)
+                .OnDelete(DeleteBehavior.Restrict);
+            ranking.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

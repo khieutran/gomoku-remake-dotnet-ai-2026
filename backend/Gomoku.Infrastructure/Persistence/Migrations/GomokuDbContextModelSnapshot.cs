@@ -70,6 +70,16 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("RankingGames")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("RankingPoints")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
@@ -92,6 +102,8 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUsers", null, t =>
                         {
                             t.HasCheckConstraint("CK_User_HistoryRevision", "\"HistoryRevision\" >= 0");
+
+                            t.HasCheckConstraint("CK_User_Ranking", "\"RankingPoints\" >= 0 AND \"RankingGames\" >= 0");
                         });
                 });
 
@@ -182,6 +194,42 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                     b.ToTable("GuestSessions", t =>
                         {
                             t.HasCheckConstraint("CK_GuestSession_Revision", "\"HistoryRevision\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Gomoku.Infrastructure.Persistence.RankingOutbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PublishedAt", "CreatedAt");
+
+                    b.ToTable("RankingOutbox", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RankingOutbox_Points", "\"Points\" >= 0");
                         });
                 });
 
@@ -489,6 +537,21 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Gomoku.Infrastructure.Persistence.RankingOutbox", b =>
+                {
+                    b.HasOne("Gomoku.Infrastructure.Persistence.StoredGame", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Gomoku.Infrastructure.Persistence.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Gomoku.Infrastructure.Persistence.StoredGame", b =>

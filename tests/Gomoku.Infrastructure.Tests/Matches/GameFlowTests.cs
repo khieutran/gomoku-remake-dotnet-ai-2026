@@ -229,6 +229,53 @@ public sealed class GameFlowTests
     }
 
     [Fact]
+    public async Task FinishedAccountGameAwardsRankingOnceButGuestGameDoesNot()
+    {
+        await using var db = Open();
+        await db.Database.MigrateAsync();
+        var account = await NewAccountAsync(db);
+        var guest = await NewGuestAsync(db);
+        var accountMatch = (await Service(db).CreateMatchAsync(account,
+            "rank-create-" + Guid.NewGuid())).MatchId!.Value;
+        var guestMatch = (await Service(db).CreateMatchAsync(guest,
+            "guest-create-" + Guid.NewGuid())).MatchId!.Value;
+
+        async Task<string> FinishXAsync(OwnerIdentity owner, Guid matchId)
+        {
+            long revision = 0;
+            string finalCommand = "";
+            for (var column = 0; column < 5; column++)
+            {
+                finalCommand = "x-" + Guid.NewGuid();
+                Assert.Equal("ok", (await Service(db).PlayAsync(owner, matchId, 0, column,
+                    PlayerActor.Human, revision++, finalCommand)).Code);
+                if (column < 4)
+                    Assert.Equal("ok", (await Service(db).PlayAsync(owner, matchId, 1, column,
+                        PlayerActor.AI, revision++, "o-" + Guid.NewGuid())).Code);
+            }
+            return finalCommand;
+        }
+
+        var finalCommand = await FinishXAsync(account, accountMatch);
+        Assert.Equal("ok", (await Service(db).PlayAsync(account, accountMatch, 0, 4,
+            PlayerActor.Human, 8, finalCommand)).Code);
+        await FinishXAsync(guest, guestMatch);
+
+        Assert.Equal(3, await db.Database.SqlQuery<int>(
+            $"SELECT \"RankingPoints\" AS \"Value\" FROM \"AspNetUsers\" WHERE \"Id\" = {account.Id}")
+            .SingleAsync());
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+            $"SELECT \"RankingGames\" AS \"Value\" FROM \"AspNetUsers\" WHERE \"Id\" = {account.Id}")
+            .SingleAsync());
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+            $"SELECT COUNT(*)::integer AS \"Value\" FROM \"RankingOutbox\" WHERE \"UserId\" = {account.Id}")
+            .SingleAsync());
+        Assert.Equal(1, await db.Database.SqlQuery<int>(
+            $"SELECT COUNT(*)::integer AS \"Value\" FROM \"RankingOutbox\"")
+            .SingleAsync());
+    }
+
+    [Fact]
     public async Task CorruptMoveAndUnsupportedRuleBlockFurtherCommands()
     {
         await using var db = Open();
