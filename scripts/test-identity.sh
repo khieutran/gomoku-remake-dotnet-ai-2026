@@ -105,9 +105,9 @@ fi
 rg 'Test Run Successful|Total tests:' "$detail_log" || true
 (unset ConnectionStrings__Gomoku GOMOKU_POSTGRES_CONNECTION; bash scripts/test-api-smoke.sh)
 "$dotnet_bin" format Gomoku.sln --verify-no-changes --no-restore \
-    --include backend/Gomoku.Api backend/Gomoku.Application/Identity \
+    --include backend/Gomoku.Api backend/Gomoku.Application/History backend/Gomoku.Application/Identity \
     backend/Gomoku.Application/Matches backend/Gomoku.Infrastructure/Identity \
-    backend/Gomoku.Infrastructure/Matches tests/Gomoku.Api.Tests \
+    backend/Gomoku.Infrastructure/History backend/Gomoku.Infrastructure/Matches tests/Gomoku.Api.Tests \
     tests/Gomoku.Application.Tests tests/Gomoku.Infrastructure.Tests/Identity \
     tests/Gomoku.Infrastructure.Tests/Matches \
     --verbosity quiet
