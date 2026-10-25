@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.13" />
     <ProjectReference Include="..\Gomoku.Application\Gomoku.Application.csproj" />
     <ProjectReference Include="..\Gomoku.Infrastructure\Gomoku.Infrastructure.csproj" />
   </ItemGroup>

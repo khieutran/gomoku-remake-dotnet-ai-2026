@@ -108,7 +108,7 @@ rg 'Test Run Successful|Total tests:' "$detail_log" || true
     --include backend/Gomoku.Api backend/Gomoku.Application/History backend/Gomoku.Application/Identity \
     backend/Gomoku.Application/Matches backend/Gomoku.Infrastructure/Identity \
     backend/Gomoku.Infrastructure/History backend/Gomoku.Infrastructure/Matches tests/Gomoku.Api.Tests \
-    tests/Gomoku.Application.Tests tests/Gomoku.Infrastructure.Tests/Identity \
-    tests/Gomoku.Infrastructure.Tests/Matches \
+    tests/Gomoku.Application.Tests tests/Gomoku.Infrastructure.Tests/History \
+    tests/Gomoku.Infrastructure.Tests/Identity tests/Gomoku.Infrastructure.Tests/Matches \
     --verbosity quiet
 printf 'PASS: Phase 2 integration, Core và API smoke tests\n'

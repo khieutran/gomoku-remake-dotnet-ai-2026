@@ -7,6 +7,13 @@ namespace Gomoku.Infrastructure.History;
 
 public sealed class EfHistoryReader(GomokuDbContext db) : IHistoryReader
 {
+    public Task<long> ReadRevisionAsync(OwnerIdentity owner,
+        CancellationToken cancellationToken = default) => owner.Scope == OwnerScope.Account
+        ? db.Users.AsNoTracking().Where(x => x.Id == owner.Id)
+            .Select(x => x.HistoryRevision).SingleOrDefaultAsync(cancellationToken)
+        : db.GuestSessions.AsNoTracking().Where(x => x.Id == owner.Id)
+            .Select(x => x.HistoryRevision).SingleOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<HistoryGameSummary>> ReadCompletedAsync(OwnerIdentity owner,
         HistoryCursor? cursor, int take, CancellationToken cancellationToken = default)
     {
@@ -40,6 +47,31 @@ public sealed class EfHistoryReader(GomokuDbContext db) : IHistoryReader
         return rows.Select(x => new HistoryGameSummary(x.GameId, x.MatchId, x.Number,
             x.RuleStatus.ToString(), x.OpeningStone.ToString(), x.RuleVersion, x.BoardSize,
             x.AiVersion, x.StartedAt, x.FinishedAt, x.MoveCount)).ToArray();
+    }
+
+    public async Task<HistoryGameSummary?> ReadCompletedSummaryAsync(OwnerIdentity owner, Guid gameId,
+        CancellationToken cancellationToken = default)
+    {
+        var row = await (from game in db.Games.AsNoTracking()
+                         join match in OwnedMatches(owner) on game.MatchId equals match.Id
+                         where game.Id == gameId && game.State == StoredGameState.Finished && game.FinishedAt != null
+                         select new
+                         {
+                             GameId = game.Id,
+                             game.MatchId,
+                             game.Number,
+                             game.RuleStatus,
+                             game.OpeningStone,
+                             match.RuleVersion,
+                             match.BoardSize,
+                             game.AiVersion,
+                             game.StartedAt,
+                             FinishedAt = game.FinishedAt!.Value,
+                             MoveCount = db.Moves.Count(move => move.GameId == game.Id)
+                         }).SingleOrDefaultAsync(cancellationToken);
+        return row is null ? null : new HistoryGameSummary(row.GameId, row.MatchId, row.Number,
+            row.RuleStatus.ToString(), row.OpeningStone.ToString(), row.RuleVersion,
+            row.BoardSize, row.AiVersion, row.StartedAt, row.FinishedAt, row.MoveCount);
     }
 
     public async Task<HistoryGameDetail?> ReadGameAsync(OwnerIdentity owner, Guid gameId,
