@@ -156,7 +156,7 @@ public sealed class AiTurnJobTests
         var game = json.RootElement.GetProperty("currentGame");
         var gameId = game.GetProperty("id").GetGuid();
         Assert.Equal("O", game.GetProperty("openingStone").GetString());
-        Assert.Equal("legal-v1", game.GetProperty("aiVersion").GetString());
+        Assert.Equal("search-v1", game.GetProperty("aiVersion").GetString());
         Assert.Equal("ai_pending", game.GetProperty("turnStatus").GetString());
         Assert.Equal(1, await db.AiTurnJobs.CountAsync(x => x.GameId == gameId &&
             x.ExpectedRevision == 10 && x.CompletedAt == null));

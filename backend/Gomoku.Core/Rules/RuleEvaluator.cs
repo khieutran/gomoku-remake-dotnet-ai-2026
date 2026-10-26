@@ -10,7 +10,7 @@ public static class RuleEvaluator
         (1, -1)
     ];
 
-    public static GameStatus Evaluate(BoardSnapshot board, Position lastMove, Stone mover, RuleSet rules)
+    public static GameStatus Evaluate(IReadOnlyBoard board, Position lastMove, Stone mover, RuleSet rules)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(rules);
@@ -67,7 +67,7 @@ public static class RuleEvaluator
         return GameStatus.Draw;
     }
 
-    private static int Count(BoardSnapshot board, Position start, Stone stone, int rowStep, int columnStep)
+    private static int Count(IReadOnlyBoard board, Position start, Stone stone, int rowStep, int columnStep)
     {
         var count = 0;
         var row = start.Row + rowStep;
@@ -84,7 +84,7 @@ public static class RuleEvaluator
         return count;
     }
 
-    private static bool IsOpponentAt(BoardSnapshot board, Position position, Stone opponent) =>
+    private static bool IsOpponentAt(IReadOnlyBoard board, Position position, Stone opponent) =>
         position.Row >= 0 && position.Row < board.Size &&
         position.Column >= 0 && position.Column < board.Size &&
         board.Get(position) == opponent;

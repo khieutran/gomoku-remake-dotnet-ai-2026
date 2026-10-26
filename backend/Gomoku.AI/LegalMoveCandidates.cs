@@ -4,7 +4,7 @@ namespace Gomoku.AI;
 
 internal static class LegalMoveCandidates
 {
-    public static List<Position> NearOccupied(BoardSnapshot board, CancellationToken cancellationToken)
+    public static List<Position> NearOccupied(IReadOnlyBoard board, CancellationToken cancellationToken)
     {
         var candidates = new HashSet<Position>();
         for (var row = 0; row < board.Size; row++)

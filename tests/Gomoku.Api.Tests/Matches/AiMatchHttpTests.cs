@@ -42,7 +42,7 @@ public sealed class AiMatchHttpTests
         }
 
         public WebApplicationFactory<Program> OpenFactory(bool workerEnabled = true,
-            bool blockingSelector = false) =>
+            bool blockingSelector = false, bool budgetFallbackSelector = false) =>
             new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("ConnectionStrings:Gomoku", ConnectionString);
@@ -50,6 +50,9 @@ public sealed class AiMatchHttpTests
                 if (blockingSelector)
                     builder.ConfigureTestServices(services =>
                         services.AddSingleton<IAiMoveSelector>(new BlockingSelector()));
+                if (budgetFallbackSelector)
+                    builder.ConfigureTestServices(services =>
+                        services.AddSingleton<IAiMoveSelector>(new BudgetFallbackSelector()));
             });
 
         public async ValueTask DisposeAsync()
@@ -69,6 +72,17 @@ public sealed class AiMatchHttpTests
             Thread.Sleep(TimeSpan.FromSeconds(4));
             return new Position(10, 11);
         }
+    }
+
+    private sealed class BudgetFallbackSelector : IAiMoveAnalyzer
+    {
+        public Position? SelectMove(GameSnapshot game, Stone side, TimeSpan budget,
+            CancellationToken cancellationToken) => throw new InvalidOperationException(
+                "Worker must consume the detailed search result.");
+
+        public SearchResult Analyze(GameSnapshot game, Stone side, TimeSpan budget,
+            CancellationToken cancellationToken) => new(
+                new Position(10, 11), SearchDecisionReason.Fallback, 0, 0, true);
     }
 
     private static async Task<HttpResponseMessage> PostAsync(HttpClient client, string path, object body)
@@ -97,7 +111,7 @@ public sealed class AiMatchHttpTests
         var start = await created.Content.ReadFromJsonAsync<JsonElement>();
         var matchId = start.GetProperty("matchId").GetGuid();
         Assert.Equal("human", start.GetProperty("currentGame").GetProperty("turnStatus").GetString());
-        Assert.Equal("legal-v1", start.GetProperty("currentGame").GetProperty("aiVersion").GetString());
+        Assert.Equal("search-v1", start.GetProperty("currentGame").GetProperty("aiVersion").GetString());
 
         var commandId = "human-" + Guid.NewGuid();
         using var played = await PostAsync(client, $"/api/v1/matches/{matchId}/moves?scope=guest",
@@ -212,6 +226,8 @@ public sealed class AiMatchHttpTests
             .GetProperty("openingStone").GetString());
         Assert.Equal("ai_pending", nextJson.RootElement.GetProperty("currentGame")
             .GetProperty("turnStatus").GetString());
+        Assert.Equal("search-v1", nextJson.RootElement.GetProperty("currentGame")
+            .GetProperty("aiVersion").GetString());
         using var duplicate = await PostAsync(client, $"/api/v1/matches/{matchId}/next-game",
             new { commandId, expectedRevision = 9 });
         Assert.Equal(nextBody, await duplicate.Content.ReadAsStringAsync());
@@ -264,5 +280,79 @@ public sealed class AiMatchHttpTests
             x.Stone == Stone.O);
         Assert.Equal("legal-v1", aiMove.ActualAiVersion);
         Assert.Equal("ai_timeout", aiMove.AiFallbackReason);
+    }
+
+    [Fact]
+    public async Task PinnedLegalVersionUsesLegacySelectorWithoutSearch()
+    {
+        await using var database = await IsolatedDatabase.CreateAsync();
+        using var factory = database.OpenFactory(blockingSelector: true);
+        using var client = factory.CreateClient();
+        using var guest = await PostAsync(client, "/api/v1/guest-sessions", new { });
+        using var created = await PostAsync(client, "/api/v1/matches?scope=guest",
+            new { commandId = "create-" + Guid.NewGuid() });
+        var createdBody = await created.Content.ReadFromJsonAsync<JsonElement>();
+        var matchId = createdBody.GetProperty("matchId").GetGuid();
+        var gameId = createdBody.GetProperty("currentGame").GetProperty("id").GetGuid();
+        await using (var db = new GomokuDbContext(new DbContextOptionsBuilder<GomokuDbContext>()
+            .UseNpgsql(database.ConnectionString).Options))
+            await db.Games.Where(x => x.Id == gameId).ExecuteUpdateAsync(setters =>
+                setters.SetProperty(x => x.AiVersion, "legal-v1"));
+
+        using var played = await PostAsync(client, $"/api/v1/matches/{matchId}/moves?scope=guest",
+            new { commandId = "move-" + Guid.NewGuid(), row = 10, column = 10, expectedRevision = 0 });
+        Assert.Equal(HttpStatusCode.Accepted, played.StatusCode);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(7));
+        do
+        {
+            using var read = await client.GetAsync($"/api/v1/matches/{matchId}?scope=guest", deadline.Token);
+            var state = await read.Content.ReadFromJsonAsync<JsonElement>(deadline.Token);
+            if (state.GetProperty("revision").GetInt64() == 2) break;
+            await Task.Delay(100, deadline.Token);
+        } while (true);
+
+        await using var verify = new GomokuDbContext(new DbContextOptionsBuilder<GomokuDbContext>()
+            .UseNpgsql(database.ConnectionString).Options);
+        var aiMove = await verify.Moves.AsNoTracking().SingleAsync(x => x.GameId == gameId &&
+            x.Stone == Stone.O);
+        Assert.Equal("legal-v1", aiMove.ActualAiVersion);
+        Assert.Null(aiMove.AiFallbackReason);
+    }
+
+    [Fact]
+    public async Task SearchBudgetFallbackPersistsActualVersionAndReason()
+    {
+        await using var database = await IsolatedDatabase.CreateAsync();
+        using var factory = database.OpenFactory(budgetFallbackSelector: true);
+        using var client = factory.CreateClient();
+        using var guest = await PostAsync(client, "/api/v1/guest-sessions", new { });
+        using var created = await PostAsync(client, "/api/v1/matches?scope=guest",
+            new { commandId = "create-" + Guid.NewGuid() });
+        var matchId = (await created.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("matchId").GetGuid();
+        using var played = await PostAsync(client, $"/api/v1/matches/{matchId}/moves?scope=guest",
+            new { commandId = "move-" + Guid.NewGuid(), row = 10, column = 10, expectedRevision = 0 });
+        Assert.Equal(HttpStatusCode.Accepted, played.StatusCode);
+
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(7));
+        Guid gameId;
+        do
+        {
+            using var read = await client.GetAsync($"/api/v1/matches/{matchId}?scope=guest", deadline.Token);
+            var state = await read.Content.ReadFromJsonAsync<JsonElement>(deadline.Token);
+            if (state.GetProperty("revision").GetInt64() == 2)
+            {
+                gameId = state.GetProperty("currentGame").GetProperty("id").GetGuid();
+                break;
+            }
+            await Task.Delay(100, deadline.Token);
+        } while (true);
+
+        await using var db = new GomokuDbContext(new DbContextOptionsBuilder<GomokuDbContext>()
+            .UseNpgsql(database.ConnectionString).Options);
+        var aiMove = await db.Moves.AsNoTracking().SingleAsync(x => x.GameId == gameId &&
+            x.Stone == Stone.O);
+        Assert.Equal("legal-v1", aiMove.ActualAiVersion);
+        Assert.Equal("ai_budget_expired", aiMove.AiFallbackReason);
     }
 }

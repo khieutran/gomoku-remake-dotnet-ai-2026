@@ -86,7 +86,7 @@ public sealed class HistoryHttpTests
         Assert.Equal("XWon", item.GetProperty("status").GetString());
         Assert.Equal("X", item.GetProperty("openingStone").GetString());
         Assert.Equal(9, item.GetProperty("moveCount").GetInt32());
-        Assert.Equal("legal-v1", item.GetProperty("aiVersion").GetString());
+        Assert.Equal("search-v1", item.GetProperty("aiVersion").GetString());
 
         var gameId = item.GetProperty("gameId").GetGuid();
         using var detail = await client.GetAsync($"/api/v1/history/{gameId}?scope=guest");
