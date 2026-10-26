@@ -55,6 +55,8 @@ public sealed class RankingServiceTests
 
     private sealed class Projection : IRankingProjection
     {
+        public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
         public Task<IReadOnlyList<RankingScore>?> ReadTopAsync(int limit,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<RankingScore>?>([new(AccountId, 1)]);

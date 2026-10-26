@@ -13,7 +13,7 @@ public sealed class HistoryService(IHistoryReader reader, IHistoryCache cache)
         ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 50);
         var revision = await reader.ReadRevisionAsync(owner, cancellationToken);
-        var key = $"gomoku:v1:history:page:{owner.Scope}:{owner.Id:N}:r{revision}:l{limit}:c{cursor?.Encode() ?? "first"}";
+        var key = $"history:v1:page:{owner.Scope}:{owner.Id:N}:r{revision}:l{limit}:c{cursor?.Encode() ?? "first"}";
         var cached = await cache.GetPageAsync(key, cancellationToken);
         if (cached is not null) return cached;
 
@@ -32,7 +32,7 @@ public sealed class HistoryService(IHistoryReader reader, IHistoryCache cache)
     {
         var summary = await reader.ReadCompletedSummaryAsync(owner, gameId, cancellationToken);
         if (summary is null) return null;
-        var key = $"gomoku:v1:history:game:{owner.Scope}:{owner.Id:N}:{gameId:N}:" +
+        var key = $"history:v1:game:{owner.Scope}:{owner.Id:N}:{gameId:N}:" +
             $"{summary.RuleVersion}:{summary.FinishedAt.ToUniversalTime().Ticks}:{summary.MoveCount}";
         var cached = await cache.GetGameAsync(key, cancellationToken);
         if (cached is not null && cached.GameId == gameId && cached.MatchId == summary.MatchId)

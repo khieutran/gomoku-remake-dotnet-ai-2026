@@ -1,15 +1,31 @@
 using Gomoku.Application.Ranking;
 using Microsoft.Extensions.Logging;
+using Gomoku.Infrastructure.Redis;
 using StackExchange.Redis;
 
 namespace Gomoku.Infrastructure.Ranking;
 
-public sealed class RedisRankingProjection(IConnectionMultiplexer connection,
+public sealed class RedisRankingProjection(IConnectionMultiplexer connection, RedisKeyspace keyspace,
     ILogger<RedisRankingProjection> logger) : IRankingProjection
 {
-    private const string BoardKey = "gomoku:ranking:v1:alltime";
-    private const string ReadyKey = "gomoku:ranking:v1:ready";
+    private string BoardKey => keyspace.Key("ranking:v1:alltime");
+    private string ReadyKey => keyspace.Key("ranking:v1:ready");
     private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(750);
+
+    public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await connection.GetDatabase().PingAsync().WaitAsync(Timeout, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Redis is unavailable for ranking projection");
+            return false;
+        }
+    }
 
     public async Task<bool> IsReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -34,9 +50,15 @@ public sealed class RedisRankingProjection(IConnectionMultiplexer connection,
         if (!await IsReadyAsync(cancellationToken)) return null;
         try
         {
-            var rows = await connection.GetDatabase()
+            var db = connection.GetDatabase();
+            var rows = await db
                 .SortedSetRangeByRankWithScoresAsync(BoardKey, 0, limit - 1, Order.Descending)
                 .WaitAsync(Timeout, cancellationToken);
+            if (rows.Length == 0)
+            {
+                var marker = await db.StringGetAsync(ReadyKey).WaitAsync(Timeout, cancellationToken);
+                if (marker.ToString() != "0") return null;
+            }
             return rows.Select(row => new RankingScore(Guid.Parse(row.Element.ToString()),
                 checked((int)row.Score))).ToArray();
         }

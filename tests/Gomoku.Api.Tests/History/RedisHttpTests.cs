@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 using Xunit;
 
 namespace Gomoku.Api.Tests.History;
@@ -62,7 +63,17 @@ public sealed class RedisHttpTests
         await cache.SetPageAsync(key, new HistoryPage([], null), TimeSpan.FromMinutes(1));
 
         Assert.NotNull(await redisCache.GetAsync(key));
-        Assert.Empty((await cache.GetPageAsync(key))!.Items);
+        HistoryPage? cachedPage = null;
+        for (var attempt = 0; attempt < 3 && cachedPage is null; attempt++)
+        {
+            // A scoped cache falls back after a transient timeout. A new request
+            // gets a new scope and can read the value already stored in Redis.
+            using var readScope = factory.Services.CreateScope();
+            cachedPage = await readScope.ServiceProvider.GetRequiredService<IHistoryCache>()
+                .GetPageAsync(key);
+        }
+        Assert.NotNull(cachedPage);
+        Assert.Empty(cachedPage.Items);
 
         using var client = factory.CreateClient();
         using var guest = await PostAsync(client, "/api/v1/guest-sessions");
@@ -78,7 +89,10 @@ public sealed class RedisHttpTests
         var firstPage = await firstList.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(1, firstPage.GetProperty("items").GetArrayLength());
         Assert.NotNull(await redisCache.GetAsync(
-            $"gomoku:v1:history:page:Guest:{guestId:N}:r1:l20:cfirst"));
+            $"history:v1:page:Guest:{guestId:N}:r1:l20:cfirst"));
+        await using (var connection = await ConnectionMultiplexer.ConnectAsync(redis))
+            Assert.True(await connection.GetDatabase().KeyExistsAsync(
+                $"gomoku:development:history:v1:page:Guest:{guestId:N}:r1:l20:cfirst"));
 
         var gameId = firstPage.GetProperty("items")[0].GetProperty("gameId").GetGuid();
         using var ownerDetail = await client.GetAsync($"/api/v1/history/{gameId}?scope=guest");
@@ -95,7 +109,7 @@ public sealed class RedisHttpTests
         Assert.Equal(2, updatedPage.GetProperty("items").GetArrayLength());
         Assert.Equal(secondMatch, updatedPage.GetProperty("items")[0].GetProperty("matchId").GetGuid());
         Assert.NotNull(await redisCache.GetAsync(
-            $"gomoku:v1:history:page:Guest:{guestId:N}:r2:l20:cfirst"));
+            $"history:v1:page:Guest:{guestId:N}:r2:l20:cfirst"));
     }
 
     private static async Task<HttpResponseMessage> PostAsync(HttpClient client, string path, object? body = null)

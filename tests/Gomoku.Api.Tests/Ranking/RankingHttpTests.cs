@@ -102,8 +102,8 @@ public sealed class RankingHttpTests
 
         await using var connection = await ConnectionMultiplexer.ConnectAsync(redis);
         var redisDb = connection.GetDatabase();
-        const string board = "gomoku:ranking:v1:alltime";
-        const string ready = "gomoku:ranking:v1:ready";
+        const string board = "gomoku:development:ranking:v1:alltime";
+        const string ready = "gomoku:development:ranking:v1:ready";
         Assert.True(await WaitUntilAsync(async () =>
             await redisDb.KeyExistsAsync(ready) &&
             await redisDb.SortedSetScoreAsync(board, accountId.ToString("N")) == 3));

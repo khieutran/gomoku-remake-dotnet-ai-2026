@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gomoku.Api.Common;
 using Gomoku.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Gomoku.Api.Identity;
 
@@ -33,7 +36,20 @@ public static class AuthEndpoints
 
             var email = request.Email.Trim();
             var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = email, Email = email };
-            var result = await users.CreateAsync(user, request.Password);
+            IdentityResult result;
+            try
+            {
+                result = await users.CreateAsync(user, request.Password);
+            }
+            catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "UserNameIndex"
+            })
+            {
+                return ApiErrors.Create(context, StatusCodes.Status409Conflict,
+                    "account_exists", "Account already exists.");
+            }
             if (!result.Succeeded)
             {
                 var duplicate = result.Errors.Any(x => x.Code is "DuplicateEmail" or "DuplicateUserName");
@@ -46,7 +62,7 @@ public static class AuthEndpoints
 
             await signIn.SignInAsync(user, isPersistent: false);
             return Results.Created("/api/v1/auth/me", new { userId = user.Id, email = user.Email });
-        });
+        }).RequireRateLimiting(AnonymousRateLimiting.Register);
 
         group.MapPost("/login", async (HttpContext context, LoginRequest request,
             UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) =>
@@ -67,7 +83,7 @@ public static class AuthEndpoints
             }
 
             return Results.Ok(new { userId = user.Id, email = user.Email });
-        });
+        }).RequireRateLimiting(AnonymousRateLimiting.Login);
 
         group.MapPost("/logout", async (SignInManager<ApplicationUser> signIn) =>
         {

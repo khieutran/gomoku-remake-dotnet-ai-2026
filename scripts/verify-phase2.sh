@@ -76,6 +76,8 @@ json_value() {
 }
 first_jar="$test_dir/first.cookies"
 second_jar="$test_dir/second.cookies"
+assert_http 200 GET /health "$first_jar"
+assert_http 200 GET /ready "$first_jar"
 assert_http 200 GET /api/v1/auth/csrf "$first_jar"
 first_csrf="$(json_value requestToken)"
 assert_http 201 POST /api/v1/guest-sessions "$first_jar" '{}' "$first_csrf"
@@ -113,6 +115,7 @@ printf 'PASS: account and guest cookies survive API restart\n'
 
 docker compose stop redis
 docker compose up -d --force-recreate --no-deps --wait api
+assert_http 200 GET /ready "$first_jar"
 assert_http 200 GET /api/v1/auth/me "$first_jar"
 assert_http 200 GET /api/v1/leaderboard "$first_jar"
 python3 - "$test_dir/response.json" "$account_id" <<'PY'
@@ -134,6 +137,14 @@ assert any(item['matchId'] == sys.argv[2] for item in items), items
 PY
 printf 'PASS: API cold start and nonempty PostgreSQL fallback while Redis is stopped\n'
 docker compose up -d --wait redis
+
+docker compose stop postgres
+assert_http 200 GET /health "$first_jar"
+assert_http 503 GET /ready "$first_jar"
+docker compose up -d --wait postgres
+docker compose up -d --wait api
+assert_http 200 GET /ready "$first_jar"
+printf 'PASS: readiness follows PostgreSQL while liveness stays available\n'
 
 restore_database="gomoku_api_restored_$RANDOM"
 sample_sql="SELECT (SELECT COUNT(*) FROM \"Matches\" WHERE \"Id\" = '$account_match'::uuid AND \"UserId\" = '$account_id'::uuid) || ',' || (SELECT COUNT(*) FROM \"Matches\" WHERE \"Id\" = '$guest_match'::uuid AND \"GuestSessionId\" = '$guest_id'::uuid) || ',' || (SELECT COUNT(*) FROM \"Moves\" WHERE \"GameId\" IN (SELECT \"Id\" FROM \"Games\" WHERE \"MatchId\" IN ('$account_match'::uuid, '$guest_match'::uuid))) || ',' || (SELECT \"RankingPoints\" FROM \"AspNetUsers\" WHERE \"Id\" = '$account_id'::uuid)"

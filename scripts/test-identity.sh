@@ -89,7 +89,10 @@ export ConnectionStrings__Gomoku="$GOMOKU_TEST_POSTGRES"
 
 cd "$repo_root"
 "$dotnet_bin" restore Gomoku.sln --nologo
+"$dotnet_bin" restore tools/Gomoku.AcceptanceSeed/Gomoku.AcceptanceSeed.csproj --nologo
 "$dotnet_bin" tool restore
+"$dotnet_bin" build tools/Gomoku.AcceptanceSeed/Gomoku.AcceptanceSeed.csproj \
+    --no-restore --nologo -m:1 -p:UseSharedCompilation=false
 "$dotnet_bin" build backend/Gomoku.Infrastructure/Gomoku.Infrastructure.csproj \
     --no-restore --nologo -m:1 -p:UseSharedCompilation=false
 "$dotnet_bin" tool run dotnet-ef -- database update \
@@ -111,4 +114,6 @@ rg 'Test Run Successful|Total tests:' "$detail_log" || true
     tests/Gomoku.Application.Tests tests/Gomoku.Infrastructure.Tests/History \
     tests/Gomoku.Infrastructure.Tests/Identity tests/Gomoku.Infrastructure.Tests/Matches \
     --verbosity quiet
+"$dotnet_bin" format tools/Gomoku.AcceptanceSeed/Gomoku.AcceptanceSeed.csproj \
+    --verify-no-changes --no-restore --verbosity quiet
 printf 'PASS: Phase 2 integration, Core và API smoke tests\n'

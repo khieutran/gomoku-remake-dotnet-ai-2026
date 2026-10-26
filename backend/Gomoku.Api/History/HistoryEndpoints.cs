@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Gomoku.Api.Common;
 using Gomoku.Api.Identity;
 using Gomoku.Application.History;
 using Microsoft.AspNetCore.DataProtection;

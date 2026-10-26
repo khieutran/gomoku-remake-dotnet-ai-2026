@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Net.Sockets;
 
-namespace Gomoku.Api.Identity;
+namespace Gomoku.Api.Common;
 
 public static class StorageFailureHandler
 {
@@ -32,7 +33,8 @@ public static class StorageFailureHandler
     {
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
-            if (current is DbUpdateException or NpgsqlException or TimeoutException)
+            if (current is TimeoutException or SocketException ||
+                current is NpgsqlException { IsTransient: true })
             {
                 return true;
             }

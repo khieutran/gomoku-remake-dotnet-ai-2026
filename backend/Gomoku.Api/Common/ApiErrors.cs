@@ -1,4 +1,4 @@
-namespace Gomoku.Api.Identity;
+namespace Gomoku.Api.Common;
 
 public static class ApiErrors
 {

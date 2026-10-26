@@ -24,6 +24,9 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
             user.Property(x => x.HistoryRevision).HasDefaultValue(0);
             user.Property(x => x.RankingPoints).HasDefaultValue(0);
             user.Property(x => x.RankingGames).HasDefaultValue(0);
+            user.HasIndex(x => new { x.RankingPoints, x.Id })
+                .IsDescending()
+                .HasFilter("\"RankingGames\" > 0");
             user.ToTable(table => table.HasCheckConstraint("CK_User_HistoryRevision", "\"HistoryRevision\" >= 0"));
             user.ToTable(table => table.HasCheckConstraint("CK_User_Ranking", "\"RankingPoints\" >= 0 AND \"RankingGames\" >= 0"));
         });
@@ -51,14 +54,15 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
             match.Property(x => x.GuestSessionId).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.RuleVersion).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.BoardSize).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
+            match.Property(x => x.CreatedAt).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             match.HasOne<GuestSession>().WithMany().HasForeignKey(x => x.GuestSessionId).OnDelete(DeleteBehavior.Restrict);
             match.HasOne<StoredGame>().WithMany()
                 .HasForeignKey(x => new { x.CurrentGameId, x.Id })
                 .HasPrincipalKey(x => new { x.Id, x.MatchId })
                 .OnDelete(DeleteBehavior.Restrict);
-            match.HasIndex(x => new { x.UserId, x.CreatedAt });
-            match.HasIndex(x => new { x.GuestSessionId, x.CreatedAt });
+            match.HasIndex(x => new { x.UserId, x.CreatedAt, x.Id }).IsDescending(false, true, true);
+            match.HasIndex(x => new { x.GuestSessionId, x.CreatedAt, x.Id }).IsDescending(false, true, true);
         });
 
         builder.Entity<StoredGame>(game =>

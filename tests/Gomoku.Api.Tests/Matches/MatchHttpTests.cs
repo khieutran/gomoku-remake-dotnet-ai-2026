@@ -4,6 +4,9 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Gomoku.Infrastructure.Persistence;
 using Xunit;
 
 namespace Gomoku.Api.Tests.Matches;
@@ -237,6 +240,87 @@ public sealed class MatchHttpTests
             new { commandId, boardSize = 15 });
         Assert.Equal(HttpStatusCode.BadRequest, changed.StatusCode);
         Assert.Equal("validation_error", (await changed.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task ActivePagesStayStableWhenSeenMatchChangesAndNewMatchIsCreated()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var guest = await PostAsync(client, "/api/v1/guest-sessions");
+        var ids = new List<Guid>();
+        for (var i = 0; i < 3; i++)
+        {
+            using var created = await PostAsync(client, "/api/v1/matches?scope=guest",
+                new { commandId = "page-" + Guid.NewGuid() });
+            ids.Add((await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("matchId").GetGuid());
+            await Task.Delay(5);
+        }
+
+        using var first = await client.GetAsync("/api/v1/matches/active?scope=guest&limit=1");
+        var firstPage = await first.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(ids[2], firstPage.GetProperty("items")[0].GetProperty("matchId").GetGuid());
+        Assert.True(firstPage.GetProperty("items")[0].TryGetProperty("updatedAt", out _));
+        Assert.False(firstPage.TryGetProperty("nextOffset", out _));
+        var cursor = firstPage.GetProperty("nextCursor").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(cursor));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<GomokuDbContext>();
+            await db.Matches.Where(x => x.Id == ids[2])
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UpdatedAt,
+                    DateTimeOffset.UtcNow.AddDays(1)));
+        }
+        using var createdLater = await PostAsync(client, "/api/v1/matches?scope=guest",
+            new { commandId = "page-later-" + Guid.NewGuid() });
+        var laterId = (await createdLater.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("matchId").GetGuid();
+
+        using var second = await client.GetAsync($"/api/v1/matches/active?scope=guest&limit=1&cursor={Uri.EscapeDataString(cursor!)}");
+        var secondPage = await second.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(ids[1], secondPage.GetProperty("items")[0].GetProperty("matchId").GetGuid());
+        var secondCursor = secondPage.GetProperty("nextCursor").GetString();
+        using var third = await client.GetAsync($"/api/v1/matches/active?scope=guest&limit=1&cursor={Uri.EscapeDataString(secondCursor!)}");
+        var thirdPage = await third.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(ids[0], thirdPage.GetProperty("items")[0].GetProperty("matchId").GetGuid());
+        Assert.Equal(JsonValueKind.Null, thirdPage.GetProperty("nextCursor").ValueKind);
+
+        using var fresh = await client.GetAsync("/api/v1/matches/active?scope=guest&limit=1");
+        Assert.Equal(laterId, (await fresh.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items")[0].GetProperty("matchId").GetGuid());
+    }
+
+    [Fact]
+    public async Task ActiveCursorRejectsTamperingAndAnotherOwner()
+    {
+        using var factory = OpenFactory();
+        using var firstClient = factory.CreateClient();
+        using var guest = await PostAsync(firstClient, "/api/v1/guest-sessions");
+        for (var i = 0; i < 2; i++)
+        {
+            using var created = await PostAsync(firstClient, "/api/v1/matches?scope=guest",
+                new { commandId = "cursor-" + Guid.NewGuid() });
+            await Task.Delay(5);
+        }
+        using var page = await firstClient.GetAsync("/api/v1/matches/active?scope=guest&limit=1");
+        var cursor = (await page.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("nextCursor").GetString()!;
+
+        using var malformed = await firstClient.GetAsync("/api/v1/matches/active?scope=guest&cursor=invalid");
+        Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
+        var changed = cursor[..^1] + (cursor[^1] == 'A' ? 'B' : 'A');
+        using var tampered = await firstClient.GetAsync($"/api/v1/matches/active?scope=guest&cursor={Uri.EscapeDataString(changed)}");
+        Assert.Equal(HttpStatusCode.BadRequest, tampered.StatusCode);
+        using var offset = await firstClient.GetAsync("/api/v1/matches/active?scope=guest&offset=1");
+        Assert.Equal(HttpStatusCode.BadRequest, offset.StatusCode);
+
+        using var secondClient = factory.CreateClient();
+        using var otherGuest = await PostAsync(secondClient, "/api/v1/guest-sessions");
+        using var foreign = await secondClient.GetAsync($"/api/v1/matches/active?scope=guest&cursor={Uri.EscapeDataString(cursor)}");
+        Assert.Equal(HttpStatusCode.BadRequest, foreign.StatusCode);
+        Assert.Equal("validation_error", (await foreign.Content.ReadFromJsonAsync<JsonElement>())
             .GetProperty("code").GetString());
     }
 }

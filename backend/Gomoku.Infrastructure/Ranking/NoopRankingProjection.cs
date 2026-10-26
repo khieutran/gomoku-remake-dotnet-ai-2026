@@ -4,6 +4,8 @@ namespace Gomoku.Infrastructure.Ranking;
 
 public sealed class NoopRankingProjection : IRankingProjection
 {
+    public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
     public Task<IReadOnlyList<RankingScore>?> ReadTopAsync(int limit,
         CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<RankingScore>?>(null);
     public Task<RankingPosition?> ReadPositionAsync(Guid accountId,

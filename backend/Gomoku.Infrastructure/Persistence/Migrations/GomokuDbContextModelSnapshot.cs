@@ -99,6 +99,10 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
+                    b.HasIndex("RankingPoints", "Id")
+                        .IsDescending()
+                        .HasFilter("\"RankingGames\" > 0");
+
                     b.ToTable("AspNetUsers", null, t =>
                         {
                             t.HasCheckConstraint("CK_User_HistoryRevision", "\"HistoryRevision\" >= 0");
@@ -328,9 +332,11 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CurrentGameId", "Id");
 
-                    b.HasIndex("GuestSessionId", "CreatedAt");
+                    b.HasIndex("GuestSessionId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
 
-                    b.HasIndex("UserId", "CreatedAt");
+                    b.HasIndex("UserId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
 
                     b.ToTable("Matches", null, t =>
                         {

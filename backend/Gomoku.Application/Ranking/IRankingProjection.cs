@@ -2,6 +2,7 @@ namespace Gomoku.Application.Ranking;
 
 public interface IRankingProjection
 {
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RankingScore>?> ReadTopAsync(int limit,
         CancellationToken cancellationToken = default);
     Task<RankingPosition?> ReadPositionAsync(Guid accountId,

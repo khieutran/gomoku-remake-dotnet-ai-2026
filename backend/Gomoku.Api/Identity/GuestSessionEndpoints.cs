@@ -32,6 +32,6 @@ public static class GuestSessionEndpoints
                 guestSessionId = created.Id,
                 expiresAt = created.ExpiresAt
             });
-        });
+        }).RequireRateLimiting(AnonymousRateLimiting.GuestSession);
     }
 }
