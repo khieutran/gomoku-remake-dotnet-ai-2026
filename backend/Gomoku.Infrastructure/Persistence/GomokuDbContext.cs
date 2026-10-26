@@ -14,6 +14,7 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
     public DbSet<StoredMove> Moves => Set<StoredMove>();
     public DbSet<CommandReceipt> CommandReceipts => Set<CommandReceipt>();
     public DbSet<RankingOutbox> RankingOutbox => Set<RankingOutbox>();
+    public DbSet<AiTurnJob> AiTurnJobs => Set<AiTurnJob>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -92,6 +93,8 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
             move.HasIndex(x => new { x.GameId, x.Row, x.Column }).IsUnique();
             move.Property(x => x.Stone).HasConversion<string>().HasMaxLength(1);
             move.Property(x => x.Actor).HasConversion<string>().HasMaxLength(8);
+            move.Property(x => x.ActualAiVersion).HasMaxLength(128);
+            move.Property(x => x.AiFallbackReason).HasMaxLength(64);
         });
 
         builder.Entity<CommandReceipt>(receipt =>
@@ -123,6 +126,23 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
                 .OnDelete(DeleteBehavior.Restrict);
             ranking.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<AiTurnJob>(job =>
+        {
+            job.ToTable("AiTurnJobs", table =>
+            {
+                table.HasCheckConstraint("CK_AiTurnJob_Revision", "\"ExpectedRevision\" >= 0");
+                table.HasCheckConstraint("CK_AiTurnJob_Attempts", "\"Attempts\" >= 0");
+            });
+            job.HasKey(x => x.Id);
+            job.HasOne<StoredMatch>().WithMany().HasForeignKey(x => x.MatchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            job.HasOne<StoredGame>().WithMany().HasForeignKey(x => x.GameId)
+                .OnDelete(DeleteBehavior.Restrict);
+            job.HasIndex(x => new { x.GameId, x.ExpectedRevision }).IsUnique();
+            job.HasIndex(x => new { x.CompletedAt, x.NextAttemptAt });
+            job.Property(x => x.LastErrorCode).HasMaxLength(64);
         });
     }
 }

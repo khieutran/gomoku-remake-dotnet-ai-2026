@@ -1,3 +1,4 @@
+using Gomoku.AI;
 using Gomoku.Application.Matches;
 using Gomoku.Infrastructure.Matches;
 
@@ -8,7 +9,11 @@ public static class GameFlowSetup
     public static void AddGomokuGameFlow(this WebApplicationBuilder builder)
     {
         builder.Services.AddScoped<IGameFlowStore, EfGameFlowStore>();
+        builder.Services.AddScoped<IAiTurnJobStore, EfAiTurnJobStore>();
         builder.Services.AddScoped<GameFlowService>();
+        builder.Services.AddSingleton<IAiMoveSelector>(new SeededLegalMoveSelector(2026));
+        if (builder.Configuration.GetValue("AiWorker:Enabled", true))
+            builder.Services.AddHostedService<AiTurnWorker>();
         builder.Services.AddScoped<IActiveMatchReader, EfActiveMatchReader>();
         builder.Services.AddScoped<ActiveMatchService>();
     }

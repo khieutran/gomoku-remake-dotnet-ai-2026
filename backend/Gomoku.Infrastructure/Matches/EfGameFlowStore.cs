@@ -33,7 +33,8 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
                 game.RuleStatus, (GameRecordState)game.State,
                 moves.Where(move => move.GameId == game.Id)
                     .Select(move => new MoveRecord(move.Step, move.Row, move.Column,
-                        move.Stone, (PlayerActor)move.Actor)).ToArray())).ToArray());
+                        move.Stone, (PlayerActor)move.Actor, move.ActualAiVersion,
+                        move.AiFallbackReason)).ToArray(), game.AiVersion)).ToArray());
     }
 
     public async Task<CommandRecord?> FindReceiptAsync(OwnerIdentity owner, string commandId,
@@ -131,6 +132,8 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
                     Id = Guid.NewGuid(), GameId = game.Id, Step = addedMove.Step,
                     Row = addedMove.Row, Column = addedMove.Column,
                     Stone = addedMove.Stone, Actor = (MoveActor)addedMove.Actor,
+                    ActualAiVersion = addedMove.ActualAiVersion,
+                    AiFallbackReason = addedMove.AiFallbackReason,
                     PlayedAt = now
                 });
                 var gameRows = await db.Games.Where(x => x.Id == game.Id && x.MatchId == updated.Id)
@@ -140,6 +143,18 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
                         .SetProperty(x => x.FinishedAt, completedGame ? now : (DateTimeOffset?)null),
                         cancellationToken);
                 if (gameRows != 1) throw new StateIntegrityException("Current Game row is missing.");
+            }
+
+            var pendingAi = !completedGame && (addedGame?.OpeningStone == Stone.O ||
+                addedMove is { Actor: PlayerActor.Human } && updated.Games[^1].Moves.Count > 0);
+            if (pendingAi)
+            {
+                db.AiTurnJobs.Add(new AiTurnJob
+                {
+                    Id = Guid.NewGuid(), MatchId = updated.Id,
+                    GameId = updated.CurrentGameId, ExpectedRevision = updated.Revision,
+                    NextAttemptAt = now, CreatedAt = now
+                });
             }
 
             if (completedGame)
@@ -195,7 +210,8 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
     private static StoredGame ToStoredGame(Guid matchId, GameRecord game, DateTimeOffset now) => new()
     {
         Id = game.Id, MatchId = matchId, Number = game.Number, OpeningStone = game.OpeningStone,
-        RuleStatus = game.RuleStatus, State = (StoredGameState)game.State, StartedAt = now
+        RuleStatus = game.RuleStatus, State = (StoredGameState)game.State,
+        AiVersion = game.AiVersion, StartedAt = now
     };
 
     private static CommandReceipt ToStoredReceipt(CommandRecord receipt, DateTimeOffset now) => new()
