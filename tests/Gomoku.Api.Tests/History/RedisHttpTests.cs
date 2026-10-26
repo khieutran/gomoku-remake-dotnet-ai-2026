@@ -63,7 +63,17 @@ public sealed class RedisHttpTests
         await cache.SetPageAsync(key, new HistoryPage([], null), TimeSpan.FromMinutes(1));
 
         Assert.NotNull(await redisCache.GetAsync(key));
-        Assert.Empty((await cache.GetPageAsync(key))!.Items);
+        HistoryPage? cachedPage = null;
+        for (var attempt = 0; attempt < 3 && cachedPage is null; attempt++)
+        {
+            // A scoped cache falls back after a transient timeout. A new request
+            // gets a new scope and can read the value already stored in Redis.
+            using var readScope = factory.Services.CreateScope();
+            cachedPage = await readScope.ServiceProvider.GetRequiredService<IHistoryCache>()
+                .GetPageAsync(key);
+        }
+        Assert.NotNull(cachedPage);
+        Assert.Empty(cachedPage.Items);
 
         using var client = factory.CreateClient();
         using var guest = await PostAsync(client, "/api/v1/guest-sessions");

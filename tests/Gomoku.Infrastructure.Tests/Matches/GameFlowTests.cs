@@ -276,6 +276,64 @@ public sealed class GameFlowTests
     }
 
     [Fact]
+    public async Task DuplicateFinalReceiptRollsBackHistoryPointsAndOutbox()
+    {
+        await using var db = Open();
+        await db.Database.MigrateAsync();
+        var owner = await NewAccountAsync(db);
+        var flow = Service(db);
+        var matchId = (await flow.CreateMatchAsync(owner, "rollback-create-" + Guid.NewGuid()))
+            .MatchId!.Value;
+        var firstCommandId = "rollback-first-" + Guid.NewGuid();
+        long revision = 0;
+        for (var column = 0; column < 4; column++)
+        {
+            Assert.Equal("ok", (await flow.PlayAsync(owner, matchId, 0, column,
+                PlayerActor.Human, revision++, column == 0 ? firstCommandId : "x-" + Guid.NewGuid())).Code);
+            Assert.Equal("ok", (await flow.PlayAsync(owner, matchId, 1, column,
+                PlayerActor.AI, revision++, "o-" + Guid.NewGuid())).Code);
+        }
+
+        var store = new EfGameFlowStore(db, TimeProvider.System);
+        var stored = (await store.LoadAsync(owner, matchId))!;
+        var finalMove = new MoveRecord(9, 0, 4, Gomoku.Core.Stone.X, PlayerActor.Human);
+        var completedGame = stored.Games[^1] with
+        {
+            Moves = [..stored.Games[^1].Moves, finalMove],
+            RuleStatus = Gomoku.Core.GameStatus.XWon,
+            State = GameRecordState.Finished
+        };
+        var updated = stored with
+        {
+            XScore = 3,
+            Revision = 9,
+            Games = [..stored.Games.Take(stored.Games.Count - 1), completedGame]
+        };
+        var duplicateReceipt = new CommandRecord(owner, firstCommandId, matchId,
+            "duplicate-receipt", 200, "{}", 9);
+
+        Assert.Equal(CommitOutcome.DuplicateCommand,
+            await store.CommitAsync(updated, 8, finalMove, null, true, duplicateReceipt));
+        Assert.Equal(8, (await db.Matches.SingleAsync(x => x.Id == matchId)).Revision);
+        Assert.Equal(8, await db.Moves.CountAsync(x => x.GameId == completedGame.Id));
+        Assert.Equal(StoredGameState.Active,
+            (await db.Games.SingleAsync(x => x.Id == completedGame.Id)).State);
+        var account = await db.Users.SingleAsync(x => x.Id == owner.Id);
+        Assert.Equal(0, account.HistoryRevision);
+        Assert.Equal(0, account.RankingPoints);
+        Assert.Equal(0, account.RankingGames);
+        Assert.Equal(0, await db.RankingOutbox.CountAsync(x => x.UserId == owner.Id));
+
+        Assert.Equal("ok", (await flow.PlayAsync(owner, matchId, 0, 4,
+            PlayerActor.Human, 8, "rollback-retry-" + Guid.NewGuid())).Code);
+        account = await db.Users.SingleAsync(x => x.Id == owner.Id);
+        Assert.Equal(1, account.HistoryRevision);
+        Assert.Equal(3, account.RankingPoints);
+        Assert.Equal(1, account.RankingGames);
+        Assert.Equal(1, await db.RankingOutbox.CountAsync(x => x.UserId == owner.Id));
+    }
+
+    [Fact]
     public async Task CorruptMoveAndUnsupportedRuleBlockFurtherCommands()
     {
         await using var db = Open();

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gomoku.Api.Common;
 using Gomoku.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
