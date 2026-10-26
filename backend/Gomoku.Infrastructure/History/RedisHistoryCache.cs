@@ -39,6 +39,11 @@ public sealed class RedisHistoryCache(IDistributedCache distributed,
         {
             throw;
         }
+        catch (OperationCanceledException exception)
+        {
+            logger.LogWarning(exception, "History cache read timed out; falling back to PostgreSQL");
+            return null;
+        }
         catch (Exception exception)
         {
             _unavailable = true;
@@ -62,6 +67,10 @@ public sealed class RedisHistoryCache(IDistributedCache distributed,
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (OperationCanceledException exception)
+        {
+            logger.LogWarning(exception, "History cache write timed out; PostgreSQL remains authoritative");
         }
         catch (Exception exception)
         {
