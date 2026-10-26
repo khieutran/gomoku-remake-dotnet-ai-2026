@@ -9,9 +9,11 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
 {
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan SearchBudget = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ModelFailureSearchBudget = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan HardTimeout = TimeSpan.FromSeconds(2);
     private static readonly SemaphoreSlim EngineSlot = new(1, 1);
     private static readonly IAiMoveSelector LegalFallback = new SeededLegalMoveSelector(2026);
+    private static readonly SearchMoveSelector SearchFallback = new(2026);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -98,7 +100,8 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
         if (game.Status != GameStatus.InProgress || game.NextStone != Stone.O)
             return "wrong_ai_turn";
         var selected = await SelectWithFallbackAsync(game, record.Games[^1].AiVersion,
-            services.GetRequiredService<IAiMoveSelector>(), cancellationToken);
+            services.GetRequiredService<IAiMoveSelector>(),
+            services.GetRequiredService<ModelGuidedMoveSelector>(), cancellationToken);
         if (selected.Move is not { } move) return "ai_no_move";
 
         var played = await services.GetRequiredService<GameFlowService>().PlayAsync(
@@ -110,16 +113,20 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
 
     private async Task<(Position? Move, AiMoveMetadata Metadata)> SelectWithFallbackAsync(
         GameSnapshot game, string? pinnedVersion, IAiMoveSelector selector,
-        CancellationToken cancellationToken)
+        ModelGuidedMoveSelector modelSelector, CancellationToken cancellationToken)
     {
         Position? move = null;
         string? fallbackReason = null;
+        var modelPinned = pinnedVersion?.StartsWith("policy-v1-",
+            StringComparison.Ordinal) == true ||
+            pinnedVersion?.StartsWith("search-v1+policy-", StringComparison.Ordinal) == true;
+        var actualVersion = AiVersions.SearchV1;
         if (pinnedVersion == AiVersions.LegalV1)
         {
             move = LegalFallback.SelectMove(game, Stone.O, TimeSpan.Zero, cancellationToken);
             return (move, new AiMoveMetadata(AiVersions.LegalV1, null));
         }
-        if (pinnedVersion != AiVersions.SearchV1)
+        if (pinnedVersion != AiVersions.SearchV1 && !modelPinned)
         {
             fallbackReason = "unsupported_ai_version";
         }
@@ -134,20 +141,30 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
             {
                 try
                 {
-                    return selector is IAiMoveAnalyzer analyzer
+                    if (modelPinned)
+                        return modelSelector.Analyze(game, Stone.O, pinnedVersion!,
+                            SearchBudget, timeout.Token);
+                    var search = selector is IAiMoveAnalyzer analyzer
                         ? analyzer.Analyze(game, Stone.O, SearchBudget, timeout.Token)
                         : new SearchResult(selector.SelectMove(game, Stone.O, SearchBudget,
                             timeout.Token), SearchDecisionReason.Search, 0, 0, false);
+                    return new VersionedSearchResult(search, AiVersions.SearchV1, null);
                 }
                 finally { EngineSlot.Release(); }
             });
             try
             {
                 var result = await engineTask.WaitAsync(HardTimeout, cancellationToken);
-                move = result.Move;
-                if (result.Reason == SearchDecisionReason.Fallback)
-                    fallbackReason = result.BudgetExpired
+                move = result.Search.Move;
+                actualVersion = result.ActualAiVersion;
+                fallbackReason = result.FallbackReason;
+                if (fallbackReason is null && result.Search.Reason == SearchDecisionReason.Fallback)
+                {
+                    fallbackReason = result.Search.BudgetExpired
                         ? "ai_budget_expired" : "ai_selector_fallback";
+                    if (modelPinned)
+                        actualVersion = AiVersions.LegalV1;
+                }
                 else if (move is null) fallbackReason = "ai_no_move";
                 else if (!IsLegal(game.Board, move.Value)) fallbackReason = "ai_invalid_move";
             }
@@ -171,14 +188,37 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
             }
         }
 
+        if (fallbackReason is not null && modelPinned &&
+            (move is null || !IsLegal(game.Board, move.Value)))
+        {
+            // A timed-out native inference call may still be running. This separate,
+            // bounded pure-search attempt lets the turn finish without the model.
+            try
+            {
+                var rescue = SearchFallback.Analyze(game, Stone.O,
+                    ModelFailureSearchBudget, cancellationToken);
+                move = rescue.Move;
+                actualVersion = rescue.Reason == SearchDecisionReason.Fallback
+                    ? AiVersions.LegalV1 : AiVersions.SearchV1;
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogWarning(exception, "Pure search rescue failed; using legal fallback");
+            }
+        }
+
         if (fallbackReason is not null)
         {
             logger.LogWarning("AI fallback {Reason} for pinned version {AiVersion}",
                 fallbackReason, pinnedVersion);
-            move = LegalFallback.SelectMove(game, Stone.O, TimeSpan.Zero, cancellationToken);
+            if (!modelPinned || move is null || !IsLegal(game.Board, move.Value))
+            {
+                move = LegalFallback.SelectMove(game, Stone.O, TimeSpan.Zero,
+                    cancellationToken);
+                actualVersion = AiVersions.LegalV1;
+            }
         }
-        return (move, new AiMoveMetadata(fallbackReason is null
-            ? AiVersions.SearchV1 : AiVersions.LegalV1, fallbackReason));
+        return (move, new AiMoveMetadata(actualVersion, fallbackReason));
     }
 
     private static bool IsLegal(BoardSnapshot board, Position move) =>

@@ -6,7 +6,8 @@ using Gomoku.Core;
 
 namespace Gomoku.Application.Matches;
 
-public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs = null)
+public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs = null,
+    IAiVersionProvider? aiVersions = null)
 {
     public async Task<FlowResult> CreateMatchAsync(OwnerIdentity owner, string commandId,
         CancellationToken cancellationToken = default)
@@ -20,7 +21,7 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
         var gameId = Guid.NewGuid();
         var core = Match.Start(new RuleSet(20));
         var game = new GameRecord(gameId, 1, Stone.X, GameStatus.InProgress,
-            GameRecordState.Active, [], AiVersions.Current);
+            GameRecordState.Active, [], aiVersions?.CurrentVersion ?? AiVersions.Current);
         var record = new MatchRecord(matchId, owner, RuleSet.CurrentVersion, 20,
             0, 0, gameId, 0, [game]);
         var receipt = new CommandRecord(owner, commandId, matchId, hash, 201, ToBody(record, core), 0);
@@ -132,7 +133,7 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
         var gameId = Guid.NewGuid();
         var game = new GameRecord(gameId, stored.Games.Count + 1,
             core.Snapshot().OpeningStone, GameStatus.InProgress, GameRecordState.Active,
-            [], AiVersions.Current);
+            [], aiVersions?.CurrentVersion ?? AiVersions.Current);
         var updated = stored with
         {
             CurrentGameId = gameId, Revision = stored.Revision + 1,

@@ -3,7 +3,8 @@ using Gomoku.Core;
 namespace Gomoku.AI;
 
 internal sealed class AlphaBetaSearch(SearchBoard board, RuleSet rules, Stone side,
-    int seed, SearchClock clock, CancellationToken cancellationToken)
+    int seed, SearchClock clock, CancellationToken cancellationToken,
+    int[]? policyRanks = null)
 {
     private const int MaxDepth = 3;
     private const int MateScore = 1_000_000;
@@ -37,7 +38,7 @@ internal sealed class AlphaBetaSearch(SearchBoard board, RuleSet rules, Stone si
 
     private (Position? Move, int Score) SearchRoot(int depth)
     {
-        var candidates = OrderedCandidates(side, 16);
+        var candidates = OrderedCandidates(side, 16, true);
         Position? bestMove = null;
         var bestScore = -Infinity;
         var alpha = -Infinity;
@@ -83,7 +84,8 @@ internal sealed class AlphaBetaSearch(SearchBoard board, RuleSet rules, Stone si
         return best == -Infinity ? 0 : best;
     }
 
-    private IReadOnlyList<Position> OrderedCandidates(Stone turn, int limit)
+    private IReadOnlyList<Position> OrderedCandidates(Stone turn, int limit,
+        bool usePolicy = false)
     {
         var opponent = Other(turn);
         var candidates = LegalMoveCandidates.NearOccupied(board, cancellationToken);
@@ -97,6 +99,9 @@ internal sealed class AlphaBetaSearch(SearchBoard board, RuleSet rules, Stone si
                 var status = RuleEvaluator.Evaluate(board, move, turn, rules);
                 var score = Won(status, turn) ? MateScore :
                     PatternEvaluator.Score(board, turn) - PatternEvaluator.Score(board, opponent);
+                // Policy only adjusts root ordering. It cannot replace Core tactical checks.
+                if (usePolicy && policyRanks is not null)
+                    score += policyRanks[move.Row * board.Size + move.Column] * 20;
                 ranked.Add((move, score));
             }
             finally { board.Undo(move); }

@@ -1,0 +1,10 @@
+# Opt-in model serving overlay. Set GOMOKU_AI_MODELS_DIR to an absolute,
+# private host directory containing champion.json and all pinned ONNX files.
+# Mounting it at the same absolute path keeps immutable model paths in the
+# champion pointer valid inside the API container.
+services:
+  api:
+    environment:
+      AiModels__ChampionPointerPath: "${GOMOKU_AI_MODELS_DIR:?set an absolute private model directory}/champion.json"
+    volumes:
+      - "${GOMOKU_AI_MODELS_DIR:?set an absolute private model directory}:${GOMOKU_AI_MODELS_DIR:?set an absolute private model directory}:ro"

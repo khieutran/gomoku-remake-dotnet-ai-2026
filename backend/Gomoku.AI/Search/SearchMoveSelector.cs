@@ -21,6 +21,10 @@ public sealed class SearchMoveSelector(int seed) : IAiMoveAnalyzer
 
     public SearchResult Analyze(BoardSnapshot snapshot, RuleSet rules, Stone side,
         TimeSpan budget, CancellationToken cancellationToken)
+        => Analyze(snapshot, rules, side, budget, cancellationToken, null);
+
+    public SearchResult Analyze(BoardSnapshot snapshot, RuleSet rules, Stone side,
+        TimeSpan budget, CancellationToken cancellationToken, int[]? policyRanks)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(rules);
@@ -31,6 +35,8 @@ public sealed class SearchMoveSelector(int seed) : IAiMoveAnalyzer
             throw new ArgumentOutOfRangeException(nameof(side));
         if (budget < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(budget));
+        if (policyRanks is not null && policyRanks.Length != snapshot.Size * snapshot.Size)
+            throw new ArgumentException("Policy rank count does not match board.", nameof(policyRanks));
 
         var board = new SearchBoard(snapshot);
         var clock = new SearchClock(budget, cancellationToken);
@@ -72,7 +78,8 @@ public sealed class SearchMoveSelector(int seed) : IAiMoveAnalyzer
                 finally { board.Undo(move); }
             }
 
-            return new AlphaBetaSearch(board, rules, side, seed, clock, cancellationToken)
+            return new AlphaBetaSearch(board, rules, side, seed, clock, cancellationToken,
+                    policyRanks)
                 .Run(fallback.Value);
         }
         catch (SearchBudgetExpiredException)
