@@ -34,3 +34,4 @@ public static class RankingEndpoints
         });
     }
 }
+using Gomoku.Api.Common;

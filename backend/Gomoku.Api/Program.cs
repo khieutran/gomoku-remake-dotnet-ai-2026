@@ -1,3 +1,4 @@
+using Gomoku.Api.Common;
 using Gomoku.Api.Identity;
 using Gomoku.Api.History;
 using Gomoku.Api.Health;

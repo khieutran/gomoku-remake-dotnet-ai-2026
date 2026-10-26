@@ -1,5 +1,6 @@
 using System.Net;
 using System.Threading.RateLimiting;
+using Gomoku.Api.Common;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 

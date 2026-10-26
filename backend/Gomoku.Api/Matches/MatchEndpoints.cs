@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Security.Cryptography;
+using Gomoku.Api.Common;
 using Gomoku.Api.Identity;
 using Gomoku.Application.Matches;
 using Microsoft.AspNetCore.DataProtection;
