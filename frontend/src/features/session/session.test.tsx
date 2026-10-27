@@ -66,11 +66,24 @@ it('retries account bootstrap after StrictMode aborts the first request', async 
 it('does not POST a guest session merely from a direct guest URL', async () => {
   const fetcher = vi.fn(async (url: string) => {
     if (url.endsWith('/auth/me')) return json({ code: 'authentication_required', message: 'Sign in.' }, 401);
+    if (url.endsWith('/guest-sessions/current')) return json({ code: 'guest_session_required', message: 'No guest session.' }, 401);
     throw Error(`Unexpected request: ${url}`);
   });
   vi.stubGlobal('fetch', fetcher);
   renderApp('/play?scope=guest');
   expect(await screen.findByRole('button', { name: 'Bắt đầu chơi khách' })).toBeInTheDocument();
+  expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/guest-sessions'))).toBe(false);
+});
+
+it('restores an existing guest after reload without creating a new session', async () => {
+  const fetcher = vi.fn(async (url: string) => {
+    if (url.endsWith('/auth/me')) return json({ code: 'authentication_required', message: 'Sign in.' }, 401);
+    if (url.endsWith('/guest-sessions/current')) return json({ guestSessionId: guestId });
+    throw Error(`Unexpected request: ${url}`);
+  });
+  vi.stubGlobal('fetch', fetcher);
+  renderApp('/history?scope=guest');
+  await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent(`guest:${guestId}`));
   expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/guest-sessions'))).toBe(false);
 });
 

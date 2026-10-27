@@ -138,6 +138,68 @@ public sealed class IdentityHttpTests
     }
 
     [Fact]
+    public async Task CurrentGuestReturnsExistingSessionWithoutIssuingNewCookie()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var created = await PostAsync(client, "/api/v1/guest-sessions");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var guestId = (await created.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("guestSessionId").GetString();
+
+        using var current = await client.GetAsync("/api/v1/guest-sessions/current");
+        Assert.Equal(HttpStatusCode.OK, current.StatusCode);
+        Assert.Equal(guestId, (await current.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("guestSessionId").GetString());
+        Assert.False(current.Headers.Contains("Set-Cookie"));
+        Assert.Contains("no-store", current.Headers.GetValues("Cache-Control").Single());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("invalid-token")]
+    public async Task CurrentGuestRejectsMissingOrInvalidCookie(string? token)
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        if (token is not null)
+        {
+            client.DefaultRequestHeaders.Add("Cookie", $"gomoku.guest={token}");
+        }
+
+        using var current = await client.GetAsync("/api/v1/guest-sessions/current");
+        Assert.Equal(HttpStatusCode.Unauthorized, current.StatusCode);
+        var error = await current.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("guest_session_required", error.GetProperty("code").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("traceId").GetString()));
+        Assert.False(current.Headers.Contains("Set-Cookie"));
+    }
+
+    [Fact]
+    public async Task CurrentGuestRejectsExpiredCookie()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var created = await PostAsync(client, "/api/v1/guest-sessions");
+        var guestId = Guid.Parse((await created.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("guestSessionId").GetString()!);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<GomokuDbContext>();
+            var session = await db.GuestSessions.SingleAsync(x => x.Id == guestId);
+            session.ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        }
+
+        using var current = await client.GetAsync("/api/v1/guest-sessions/current");
+        Assert.Equal(HttpStatusCode.Unauthorized, current.StatusCode);
+        Assert.Equal("guest_session_required", (await current.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("code").GetString());
+        Assert.False(current.Headers.Contains("Set-Cookie"));
+    }
+
+    [Fact]
     public async Task UnsafeRequestWithoutCsrfTokenIsRejected()
     {
         using var factory = OpenFactory();

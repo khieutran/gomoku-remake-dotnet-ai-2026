@@ -1,4 +1,5 @@
 using Gomoku.Application.Identity;
+using Gomoku.Api.Common;
 
 namespace Gomoku.Api.Identity;
 
@@ -8,6 +9,17 @@ public static class GuestSessionEndpoints
 
     public static void MapGuestSessionEndpoints(this WebApplication app)
     {
+        app.MapGet("/api/v1/guest-sessions/current", async (HttpContext context,
+            IGuestSessionService guests) =>
+        {
+            var token = context.Request.Cookies[CookieName];
+            var guestId = await guests.ResolveAsync(token, context.RequestAborted);
+            return guestId.HasValue
+                ? Results.Ok(new { guestSessionId = guestId.Value })
+                : ApiErrors.Create(context, StatusCodes.Status401Unauthorized,
+                    "guest_session_required", "Guest session is missing or expired.");
+        });
+
         app.MapPost("/api/v1/guest-sessions", async (HttpContext context,
             IGuestSessionService guests, IWebHostEnvironment environment) =>
         {

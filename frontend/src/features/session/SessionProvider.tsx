@@ -36,17 +36,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     const current = ++generation.current;
     setReady(false);
-    void sessionApi.me(controller.signal).then(async account => {
-      if (current === generation.current) {
+    void (async () => {
+      try {
+        const account = await sessionApi.me(controller.signal);
+        if (current !== generation.current || controller.signal.aborted) return;
         bootstrapped.current = true;
         await changeSession({ scope: 'account', ownerId: account.userId });
+      } catch (accountError) {
+        if (current !== generation.current || controller.signal.aborted) return;
+        if (!(accountError instanceof ApiError && accountError.status === 401)) {
+          setError('Không kiểm tra được phiên. Hãy tải lại trang.');
+          setReady(true);
+          return;
+        }
+        try {
+          const guest = await sessionApi.currentGuest(controller.signal);
+          if (current !== generation.current || controller.signal.aborted) return;
+          bootstrapped.current = true;
+          await changeSession({ scope: 'guest', ownerId: guest.guestSessionId });
+        } catch (guestError) {
+          if (current !== generation.current || controller.signal.aborted) return;
+          if (guestError instanceof ApiError && guestError.status === 401) bootstrapped.current = true;
+          else setError('Không kiểm tra được phiên. Hãy tải lại trang.');
+          setReady(true);
+        }
       }
-    }).catch((reason: unknown) => {
-      if (current !== generation.current || controller.signal.aborted) return;
-      if (reason instanceof ApiError && reason.status === 401) bootstrapped.current = true;
-      else setError('Không kiểm tra được phiên. Hãy tải lại trang.');
-      setReady(true);
-    });
+    })();
     return () => controller.abort();
   }, [location.pathname, changeSession]);
 
