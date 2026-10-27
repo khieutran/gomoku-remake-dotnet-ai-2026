@@ -4,7 +4,13 @@
 .codex
 .aws
 docs
+training
 node_modules
+frontend/dist
+backend/Gomoku.Api/wwwroot
+artifacts
+*.onnx
+*.pt
 **/bin
 **/obj
 **/TestResults

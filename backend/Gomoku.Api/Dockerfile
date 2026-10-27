@@ -1,3 +1,11 @@
+FROM node:24.18.0-alpine AS web
+WORKDIR /src
+COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/package.json
+RUN npm ci
+COPY frontend/ frontend/
+RUN npm run build -w frontend
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY .config/dotnet-tools.json .config/dotnet-tools.json
@@ -9,6 +17,7 @@ COPY backend/Gomoku.Api/Gomoku.Api.csproj backend/Gomoku.Api/
 RUN dotnet restore backend/Gomoku.Api/Gomoku.Api.csproj
 COPY backend/ backend/
 RUN dotnet publish backend/Gomoku.Api/Gomoku.Api.csproj -c Release -o /out --no-restore
+COPY --from=web /src/frontend/dist/ /out/wwwroot/
 RUN dotnet tool restore && dotnet tool run dotnet-ef -- migrations bundle \
     --project backend/Gomoku.Infrastructure/Gomoku.Infrastructure.csproj \
     --startup-project backend/Gomoku.Infrastructure/Gomoku.Infrastructure.csproj \

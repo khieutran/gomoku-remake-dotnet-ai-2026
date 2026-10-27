@@ -12,8 +12,12 @@ TestResults/
 # React / Node.js
 node_modules/
 dist/
+backend/Gomoku.Api/wwwroot/
+artifacts/web-publish/
 build/
 coverage/
+test-results/
+playwright-report/
 *.tsbuildinfo
 
 # Local configuration
