@@ -1,12 +1,14 @@
+import { lazy, Suspense } from 'react';
 import { Link, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
 import { Window } from '../shared/ui/Window';
 import { AuthForms } from '../features/session/AuthForms';
 import { GuestStartButton, OwnerGate } from '../features/session/OwnerGate';
 import { useSession } from '../features/session/sessionContext';
-import { LeaderboardPage } from '../features/leaderboard/LeaderboardPage';
-import { HistoryPage } from '../features/history/HistoryPage';
-import { ReplayPage } from '../features/history/ReplayPage';
 import { MatchPage } from '../features/match/MatchPage';
+
+const LeaderboardPage = lazy(() => import('../features/leaderboard/LeaderboardPage').then(module => ({ default: module.LeaderboardPage })));
+const HistoryPage = lazy(() => import('../features/history/HistoryPage').then(module => ({ default: module.HistoryPage })));
+const ReplayPage = lazy(() => import('../features/history/ReplayPage').then(module => ({ default: module.ReplayPage })));
 
 function Page({ title, children }: { title: string; children: React.ReactNode }) {
   return <Window title={title}><h1 tabIndex={-1}>{title}</h1>{children}</Window>;
@@ -41,7 +43,7 @@ function ReplayRoute() {
   return <Window title="Phát lại ván đấu"><ReplayPage scope={scope} gameId={gameId ?? ''} /></Window>;
 }
 export function AppRoutes() {
-  return <Routes>
+  return <Suspense fallback={<p role="status">Đang tải trang…</p>}><Routes>
     <Route path="/" element={<EntryPage />} />
     <Route path="/play" element={<PlayEntry />} />
     <Route path="/play/:matchId" element={<PlayMatch />} />
@@ -51,5 +53,5 @@ export function AppRoutes() {
     <Route path="/history/:gameId" element={<ReplayRoute />} />
     <Route path="/leaderboard" element={<LeaderboardPage />} />
     <Route path="*" element={<Page title="Không tìm thấy trang"><Link to="/">Về trang chọn cách chơi</Link></Page>} />
-  </Routes>;
+  </Routes></Suspense>;
 }

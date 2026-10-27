@@ -29,12 +29,12 @@ it('supports keyboard navigation and moves focus to the destination heading', as
   expect(screen.getByRole('link', { name: 'Đến nội dung' })).toHaveFocus();
   screen.getByRole('link', { name: 'Lịch sử' }).focus();
   await user.keyboard('{Enter}');
-  expect(screen.getByRole('heading', { name: 'Lịch sử ván đấu' })).toHaveFocus();
+  expect(await screen.findByRole('heading', { name: 'Lịch sử ván đấu' })).toHaveFocus();
 });
-it.each([['/play', 'Bắt đầu chơi'], ['/play/example', 'Ván đang chơi'], ['/login', 'Đăng nhập'], ['/register', 'Đăng ký'], ['/history/example', 'Phát lại ván đấu'], ['/leaderboard', 'Bảng xếp hạng']])('renders the %s route', (path, heading) => {
+it.each([['/play', 'Bắt đầu chơi'], ['/play/example', 'Ván đang chơi'], ['/login', 'Đăng nhập'], ['/register', 'Đăng ký'], ['/history/example', 'Phát lại ván đấu'], ['/leaderboard', 'Bảng xếp hạng']])('renders the %s route', async (path, heading) => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 })));
   renderApp(path);
-  expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
 });
 
 it('connects the leaderboard route to public server points', async () => {

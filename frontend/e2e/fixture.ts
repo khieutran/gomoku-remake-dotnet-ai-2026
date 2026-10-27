@@ -1,0 +1,33 @@
+import type { Page } from '@playwright/test';
+
+export const matchId = '821412da-c99d-45be-a7e9-328fb464380b';
+const gameId = '933412da-c99d-45be-a7e9-328fb464380b';
+const base = {
+  matchId, boardSize: 20, ruleVersion: 'v1', revision: 0, xScore: 0, oScore: 0,
+  currentGame: { id: gameId, number: 1, openingStone: 'X', aiVersion: null, status: 'InProgress', nextStone: 'X', turnStatus: 'human', aiErrorCode: null, aiRetryAt: null, moves: [] },
+};
+
+export async function mockGuestMatch(page: Page) {
+  const moves: { row: number; column: number }[] = [];
+  let snapshot: typeof base = base;
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (path === '/api/v1/auth/me') return route.fulfill({ status: 401, json: { code: 'authentication_required', message: 'Sign in' } });
+    if (path === '/api/v1/auth/csrf') return route.fulfill({ json: { requestToken: 'test-csrf' } });
+    if (path === '/api/v1/guest-sessions') return route.fulfill({ json: { guestSessionId: 'a1b412da-c99d-45be-a7e9-328fb464380b' } });
+    if (path === '/api/v1/matches/active') return route.fulfill({ json: { items: [{ matchId, gameId, revision: 0, updatedAt: '2026-10-27T00:00:00Z' }], nextCursor: null } });
+    if (path === `/api/v1/matches/${matchId}/moves`) {
+      const command = route.request().postDataJSON() as { row: number; column: number };
+      moves.push({ row: command.row, column: command.column });
+      snapshot = { ...base, revision: 1, currentGame: { ...base.currentGame, turnStatus: 'ai_pending', nextStone: 'O', moves: [{ step: 1, row: command.row, column: command.column, stone: 'X' }] } } as typeof base;
+      return route.fulfill({ status: 202, json: snapshot });
+    }
+    if (path === `/api/v1/matches/${matchId}`) return route.fulfill({ json: snapshot });
+    return route.fulfill({ status: 404, json: { code: 'not_found', message: path } });
+  });
+  await page.goto('/play?scope=guest');
+  await page.getByRole('button', { name: 'Bắt đầu chơi khách' }).click();
+  await page.getByRole('heading', { name: 'Ván 1' }).waitFor();
+  return moves;
+}
