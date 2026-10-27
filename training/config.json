@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "seed": 20261026,
+  "epochs": 8,
+  "batchSize": 64,
+  "learningRate": 0.001,
+  "channels": 32,
+  "teacherAiVersions": ["search-v1"]
+}

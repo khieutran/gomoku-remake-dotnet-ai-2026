@@ -14,4 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="../../backend/Gomoku.Infrastructure/Gomoku.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
 </Project>

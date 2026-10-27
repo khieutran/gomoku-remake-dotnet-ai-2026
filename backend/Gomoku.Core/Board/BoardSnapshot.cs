@@ -1,6 +1,6 @@
 namespace Gomoku.Core;
 
-public sealed class BoardSnapshot
+public sealed class BoardSnapshot : IReadOnlyBoard
 {
     private readonly Stone[,] _cells;
 

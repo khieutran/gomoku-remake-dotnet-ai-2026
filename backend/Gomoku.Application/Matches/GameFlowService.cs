@@ -6,7 +6,8 @@ using Gomoku.Core;
 
 namespace Gomoku.Application.Matches;
 
-public sealed class GameFlowService(IGameFlowStore store)
+public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs = null,
+    IAiVersionProvider? aiVersions = null)
 {
     public async Task<FlowResult> CreateMatchAsync(OwnerIdentity owner, string commandId,
         CancellationToken cancellationToken = default)
@@ -19,7 +20,8 @@ public sealed class GameFlowService(IGameFlowStore store)
         var matchId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
         var core = Match.Start(new RuleSet(20));
-        var game = new GameRecord(gameId, 1, Stone.X, GameStatus.InProgress, GameRecordState.Active, []);
+        var game = new GameRecord(gameId, 1, Stone.X, GameStatus.InProgress,
+            GameRecordState.Active, [], aiVersions?.CurrentVersion ?? AiVersions.Current);
         var record = new MatchRecord(matchId, owner, RuleSet.CurrentVersion, 20,
             0, 0, gameId, 0, [game]);
         var receipt = new CommandRecord(owner, commandId, matchId, hash, 201, ToBody(record, core), 0);
@@ -35,7 +37,12 @@ public sealed class GameFlowService(IGameFlowStore store)
         try
         {
             var core = MatchReplayer.Replay(stored);
-            return new FlowResult("ok", 200, ToBody(stored, core), matchId, null, stored.Revision);
+            var pending = core.Snapshot().CurrentGame.NextStone == Stone.O;
+            var progress = pending && jobs is not null
+                ? await jobs.ReadProgressAsync(stored.CurrentGameId, stored.Revision, cancellationToken)
+                : null;
+            return new FlowResult("ok", 200, ToBody(stored, core, progress),
+                matchId, null, stored.Revision);
         }
         catch (UnsupportedRuleVersionException)
         {
@@ -48,9 +55,12 @@ public sealed class GameFlowService(IGameFlowStore store)
     }
 
     public async Task<FlowResult> PlayAsync(OwnerIdentity owner, Guid matchId, int row, int column,
-        PlayerActor actor, long expectedRevision, string commandId, CancellationToken cancellationToken = default)
+        PlayerActor actor, long expectedRevision, string commandId,
+        CancellationToken cancellationToken = default, AiMoveMetadata? aiMetadata = null)
     {
         if (!ValidCommand(owner, commandId)) return FlowResult.Error("validation_error");
+        if (actor == PlayerActor.Human && aiMetadata is not null)
+            return FlowResult.Error("validation_error");
         var hash = Hash($"move|{matchId:N}|{expectedRevision}|{row}|{column}|{actor}");
         var previous = await store.FindReceiptAsync(owner, commandId, cancellationToken);
         if (previous is not null) return ReplayReceipt(previous, hash);
@@ -79,7 +89,8 @@ public sealed class GameFlowService(IGameFlowStore store)
 
         var after = core.Snapshot();
         var move = after.CurrentGame.Moves[^1];
-        var added = new MoveRecord(move.Number, row, column, move.Stone, actor);
+        var added = new MoveRecord(move.Number, row, column, move.Stone, actor,
+            aiMetadata?.ActualVersion, aiMetadata?.FallbackReason);
         var oldGame = stored.Games[^1];
         var completed = after.CurrentGame.Status != GameStatus.InProgress;
         var game = oldGame with
@@ -93,7 +104,8 @@ public sealed class GameFlowService(IGameFlowStore store)
             XScore = after.XScore, OScore = after.OScore, Revision = stored.Revision + 1,
             Games = [..stored.Games.Take(stored.Games.Count - 1), game]
         };
-        var receipt = new CommandRecord(owner, commandId, matchId, hash, 200,
+        var httpStatus = !completed && after.CurrentGame.NextStone == Stone.O ? 202 : 200;
+        var receipt = new CommandRecord(owner, commandId, matchId, hash, httpStatus,
             ToBody(updated, core), updated.Revision);
         var outcome = await store.CommitAsync(updated, expectedRevision, added, null,
             completed, receipt, cancellationToken);
@@ -120,13 +132,15 @@ public sealed class GameFlowService(IGameFlowStore store)
 
         var gameId = Guid.NewGuid();
         var game = new GameRecord(gameId, stored.Games.Count + 1,
-            core.Snapshot().OpeningStone, GameStatus.InProgress, GameRecordState.Active, []);
+            core.Snapshot().OpeningStone, GameStatus.InProgress, GameRecordState.Active,
+            [], aiVersions?.CurrentVersion ?? AiVersions.Current);
         var updated = stored with
         {
             CurrentGameId = gameId, Revision = stored.Revision + 1,
             Games = [..stored.Games, game]
         };
-        var receipt = new CommandRecord(owner, commandId, matchId, hash, 200,
+        var httpStatus = game.OpeningStone == Stone.O ? 202 : 200;
+        var receipt = new CommandRecord(owner, commandId, matchId, hash, httpStatus,
             ToBody(updated, core), updated.Revision);
         var outcome = await store.CommitAsync(updated, expectedRevision, null, game,
             false, receipt, cancellationToken);
@@ -158,7 +172,7 @@ public sealed class GameFlowService(IGameFlowStore store)
     private static string Hash(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
-    private static string ToBody(MatchRecord record, Match core)
+    private static string ToBody(MatchRecord record, Match core, AiTurnProgress? progress = null)
     {
         var snapshot = core.Snapshot();
         var current = record.Games[^1];
@@ -175,8 +189,16 @@ public sealed class GameFlowService(IGameFlowStore store)
                 id = current.Id,
                 number = current.Number,
                 openingStone = snapshot.OpeningStone.ToString(),
+                aiVersion = current.AiVersion,
                 status = snapshot.CurrentGame.Status.ToString(),
                 nextStone = snapshot.CurrentGame.NextStone?.ToString(),
+                turnStatus = snapshot.CurrentGame.Status != GameStatus.InProgress ? "finished"
+                    : snapshot.CurrentGame.NextStone != Stone.O ? "human"
+                    : progress is { Attempts: >= 3, LastErrorCode: not null }
+                        ? "ai_retrying" : "ai_pending",
+                aiErrorCode = progress is { Attempts: >= 3 } ? progress.LastErrorCode : null,
+                aiRetryAt = progress is { Attempts: >= 3 }
+                    ? (DateTimeOffset?)progress.NextAttemptAt : null,
                 moves = snapshot.CurrentGame.Moves.Select(move => new
                 {
                     step = move.Number,

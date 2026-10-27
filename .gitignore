@@ -26,3 +26,12 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Offline training outputs and local environments
+training/artifacts/
+training/runs/
+training/.venv/
+training/__pycache__/
+training/tests/__pycache__/
+*.onnx
+*.pt

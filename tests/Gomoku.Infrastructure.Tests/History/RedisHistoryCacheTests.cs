@@ -44,11 +44,26 @@ public sealed class RedisHistoryCacheTests
             TimeSpan.FromHours(1));
     }
 
+    [Fact]
+    public async Task TimedOutWriteDoesNotDisableLaterReadInSameScope()
+    {
+        var storage = new FakeDistributedCache { TimeoutAfterNextSet = true };
+        var cache = new RedisHistoryCache(storage,
+            NullLogger<RedisHistoryCache>.Instance);
+
+        await cache.SetPageAsync("page", new HistoryPage([], null),
+            TimeSpan.FromMinutes(1));
+
+        Assert.NotNull(storage.Get("page"));
+        Assert.Empty((await cache.GetPageAsync("page"))!.Items);
+    }
+
     private sealed class FakeDistributedCache : IDistributedCache
     {
         private readonly Dictionary<string, byte[]> _values = new();
         public readonly Dictionary<string, DistributedCacheEntryOptions> Options = new();
         public bool Fail { get; set; }
+        public bool TimeoutAfterNextSet { get; set; }
 
         public byte[]? Get(string key) => Fail ? throw new InvalidOperationException("Redis down")
             : _values.GetValueOrDefault(key);
@@ -67,6 +82,11 @@ public sealed class RedisHistoryCacheTests
             CancellationToken token = default)
         {
             Set(key, value, options);
+            if (TimeoutAfterNextSet)
+            {
+                TimeoutAfterNextSet = false;
+                throw new TaskCanceledException("write acknowledgement timed out");
+            }
             return Task.CompletedTask;
         }
 

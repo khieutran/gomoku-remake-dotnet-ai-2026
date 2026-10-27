@@ -17,5 +17,7 @@ public sealed class StoredMove
     public int Column { get; set; }
     public Stone Stone { get; set; }
     public MoveActor Actor { get; set; }
+    public string? ActualAiVersion { get; set; }
+    public string? AiFallbackReason { get; set; }
     public DateTimeOffset PlayedAt { get; set; }
 }

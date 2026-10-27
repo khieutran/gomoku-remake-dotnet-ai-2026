@@ -3,6 +3,7 @@ WORKDIR /src
 COPY .config/dotnet-tools.json .config/dotnet-tools.json
 COPY backend/Gomoku.Core/Gomoku.Core.csproj backend/Gomoku.Core/
 COPY backend/Gomoku.Application/Gomoku.Application.csproj backend/Gomoku.Application/
+COPY backend/Gomoku.AI/Gomoku.AI.csproj backend/Gomoku.AI/
 COPY backend/Gomoku.Infrastructure/Gomoku.Infrastructure.csproj backend/Gomoku.Infrastructure/
 COPY backend/Gomoku.Api/Gomoku.Api.csproj backend/Gomoku.Api/
 RUN dotnet restore backend/Gomoku.Api/Gomoku.Api.csproj

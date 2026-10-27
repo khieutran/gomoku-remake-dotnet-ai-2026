@@ -13,4 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="../../backend/Gomoku.Application/Gomoku.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
 </Project>
