@@ -24,6 +24,7 @@ coverage/
 # Editors and operating systems
 .vscode/
 .idea/
+.playwright-cli/
 .DS_Store
 Thumbs.db
 

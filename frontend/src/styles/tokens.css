@@ -1,0 +1,16 @@
+:root {
+  --bg: #dce9ff;
+  --paper: #ffe8d2;
+  --ink: #493039;
+  --bar: #62c4bd;
+  --accent: #ec6983;
+  --yellow: #ffd36e;
+  --line: #70494c;
+  --shadow: #b4c6df;
+  --font-display: 'Courier New', ui-monospace, monospace;
+  --font-body: ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
