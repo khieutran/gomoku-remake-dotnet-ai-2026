@@ -13,6 +13,7 @@ p { max-width: 65ch; margin: 0 0 1rem; }
 .brand-mark { background: var(--yellow); border: 3px solid var(--line); padding: 10px 6px; box-shadow: 3px 3px 0 var(--line); font-size: 1rem; letter-spacing: -.1em; }
 nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 nav a { padding: 8px 0; font-weight: 650; }
+nav .nav-action { padding: 8px 0; border: 0; background: transparent; color: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: .2em; }
 nav a[aria-current] { text-decoration-thickness: 3px; }
 .window { background: var(--paper); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--shadow), 8px 8px 0 var(--line); min-width: 0; }
 .window-bar { background: var(--bar); border-bottom: 3px solid var(--line); padding: 8px 16px; font: bold 1rem/1.5 var(--font-display); }
@@ -24,6 +25,9 @@ nav a[aria-current] { text-decoration-thickness: 3px; }
 .button:disabled { opacity: .6; cursor: default; }
 .text-link { padding: 10px 0; font-weight: 650; }
 .guest-note { border-top: 2px dashed #be9fa0; padding-top: 20px; margin-bottom: 0; }
+.auth-form { display: grid; gap: 16px; max-width: 420px; margin-bottom: 24px; }
+.auth-form label { display: grid; gap: 6px; font-weight: 700; }
+.auth-form input { width: 100%; min-height: 44px; padding: 9px 12px; border: 2px solid var(--line); background: #fffaf3; color: var(--ink); }
 .entry-stones { display: flex; gap: 24px; font: 900 4rem/1 var(--font-display); padding-bottom: 24px; }
 .entry-stones span:first-child { color: #a42a54; }
 .entry-stones span:last-child { color: #246d73; }

@@ -1,21 +1,30 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, vi } from 'vitest';
 import App from './App';
+import { SessionProvider } from '../features/session/SessionProvider';
 
-it('offers entry choices without opening a server session', () => {
-  const fetchSpy = vi.spyOn(globalThis, 'fetch');
-  render(<MemoryRouter><App /></MemoryRouter>);
+function renderApp(path = '/') {
+  const query = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={query}><MemoryRouter initialEntries={[path]}><SessionProvider><App /></SessionProvider></MemoryRouter></QueryClientProvider>);
+}
+afterEach(() => vi.unstubAllGlobals());
+
+it('offers guest choice without creating a guest on page load', () => {
+  const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 }));
+  vi.stubGlobal('fetch', fetchSpy);
+  renderApp();
   expect(screen.getByRole('heading', { name: /Một nước nữa nhé/ })).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Chơi khách' })).toHaveAttribute('href', '/play?scope=guest');
+  expect(screen.getByRole('button', { name: 'Chơi khách' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Đăng ký' })).toBeInTheDocument();
-  expect(fetchSpy).not.toHaveBeenCalled();
-  fetchSpy.mockRestore();
+  expect(fetchSpy.mock.calls.some(([url]) => String(url).endsWith('/guest-sessions'))).toBe(false);
 });
 it('supports keyboard navigation and moves focus to the destination heading', async () => {
   const user = userEvent.setup();
-  render(<MemoryRouter><App /></MemoryRouter>);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 })));
+  renderApp();
   await user.tab();
   expect(screen.getByRole('link', { name: 'Đến nội dung' })).toHaveFocus();
   screen.getByRole('link', { name: 'Lịch sử' }).focus();
@@ -23,6 +32,7 @@ it('supports keyboard navigation and moves focus to the destination heading', as
   expect(screen.getByRole('heading', { name: 'Lịch sử ván đấu' })).toHaveFocus();
 });
 it.each([['/play', 'Bắt đầu chơi'], ['/play/example', 'Ván đang chơi'], ['/login', 'Đăng nhập'], ['/register', 'Đăng ký'], ['/history/example', 'Phát lại ván đấu'], ['/leaderboard', 'Bảng xếp hạng']])('renders the %s route', (path, heading) => {
-  render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 })));
+  renderApp(path);
   expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
 });
