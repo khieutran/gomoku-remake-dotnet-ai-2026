@@ -14,6 +14,7 @@ export async function mockGuestMatch(page: Page) {
     const url = new URL(route.request().url());
     const path = url.pathname;
     if (path === '/api/v1/auth/me') return route.fulfill({ status: 401, json: { code: 'authentication_required', message: 'Sign in' } });
+    if (path === '/api/v1/guest-sessions/current') return route.fulfill({ status: 401, json: { code: 'guest_session_required', message: 'No guest cookie' } });
     if (path === '/api/v1/auth/csrf') return route.fulfill({ json: { requestToken: 'test-csrf' } });
     if (path === '/api/v1/guest-sessions') return route.fulfill({ json: { guestSessionId: 'a1b412da-c99d-45be-a7e9-328fb464380b' } });
     if (path === '/api/v1/matches/active') return route.fulfill({ json: { items: [{ matchId, gameId, revision: 0, updatedAt: '2026-10-27T00:00:00Z' }], nextCursor: null } });
