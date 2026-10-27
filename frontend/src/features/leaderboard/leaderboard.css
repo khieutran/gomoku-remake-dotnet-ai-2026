@@ -1,0 +1,13 @@
+.leaderboard-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr); gap: 24px; align-items: start; }
+.leaderboard-table-scroll { overflow-x: auto; }
+.leaderboard-layout table { width: 100%; border-collapse: collapse; text-align: left; }
+.leaderboard-layout th, .leaderboard-layout td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.leaderboard-layout td:last-child, .leaderboard-layout th:last-child { text-align: right; font-weight: 700; }
+.leaderboard-id { overflow-wrap: anywhere; font-size: .875rem; }
+.leaderboard-personal h2, .match-score-panel h2 { margin: 0 0 12px; font: 700 1.1rem/1.3 var(--font-display); }
+.leaderboard-stats, .match-score-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.leaderboard-stats div, .match-score-values div { padding: 12px; border: 2px solid var(--line); background: #fff6e8; }
+.leaderboard-stats dt, .match-score-values dt { font-size: .875rem; font-weight: 700; }
+.leaderboard-stats dd, .match-score-values dd { margin: 0; font: 700 1.6rem/1.3 var(--font-display); }
+.match-score-panel { padding: 16px; border: 2px solid var(--line); background: var(--paper); }
+@media (max-width: 700px) { .leaderboard-layout { grid-template-columns: minmax(0, 1fr); } }
