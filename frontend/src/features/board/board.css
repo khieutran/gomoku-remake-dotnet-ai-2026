@@ -1,0 +1,18 @@
+.gomoku-board { width: 100%; min-width: 0; }
+.gomoku-grid { display: grid; grid-template-rows: repeat(var(--board-size), minmax(0, 1fr)); width: 100%; aspect-ratio: 1; border: 2px solid #70494c; background: #f4d8af; box-sizing: border-box; }
+.gomoku-row { display: grid; grid-template-columns: repeat(var(--board-size), minmax(0, 1fr)); min-height: 0; }
+.gomoku-cell { display: grid; place-items: center; position: relative; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-right: 1px solid #b88c72; border-bottom: 1px solid #b88c72; border-radius: 0; background: transparent; color: #493039; font: 900 clamp(16px, 2.3vw, 25px)/1 'Courier New', monospace; touch-action: manipulation; }
+button.gomoku-cell { cursor: pointer; }
+button.gomoku-cell[aria-disabled="true"] { cursor: default; }
+.gomoku-cell--x { color: #a62d55; }
+.gomoku-cell--o { color: #1b6268; }
+.gomoku-cell[data-last-move] { background: #fff1b5; box-shadow: inset 0 0 0 2px #70494c; }
+.gomoku-cell:focus-visible { z-index: 1; outline: 3px solid #892650; outline-offset: -3px; background-color: #fff6dc; }
+.gomoku-grid--overview { container-type: inline-size; }
+.gomoku-grid--overview .gomoku-cell { font-size: calc(75cqw / var(--board-size)); }
+.gomoku-zoom-viewport { position: relative; width: 100%; max-height: min(65vh, 560px); overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; scrollbar-color: #62c4bd #fbf2df; border: 2px solid #70494c; box-sizing: border-box; }
+.gomoku-zoom-viewport .gomoku-grid { width: calc(var(--board-size) * 40px + 4px); min-width: calc(var(--board-size) * 40px + 4px); }
+.gomoku-zoom-viewport .gomoku-cell { width: 40px; height: 40px; box-sizing: border-box; font-size: 28px; touch-action: pan-x pan-y; }
+.gomoku-zoom-button { border: 2px solid #70494c; background: #ffd36e; color: #493039; font: inherit; font-weight: 700; min-height: 44px; padding: 8px 12px; margin-block: 10px; box-shadow: 2px 2px 0 #70494c; cursor: pointer; }
+.gomoku-zoom-button:focus-visible { outline: 3px solid #892650; outline-offset: 3px; }
+.gomoku-board-help { color: #493039; font-size: 14px; line-height: 1.5; margin-block: 10px; }
