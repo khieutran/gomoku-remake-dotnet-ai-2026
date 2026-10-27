@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -35,4 +35,41 @@ it.each([['/play', 'Bắt đầu chơi'], ['/play/example', 'Ván đang chơi'],
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 })));
   renderApp(path);
   expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+});
+
+it('connects the leaderboard route to public server points', async () => {
+  const accountId = 'c4b94753-4f50-4515-925d-59c43299fe2e';
+  const fetcher = vi.fn(async (url: string) => url.endsWith('/auth/me')
+    ? new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 })
+    : new Response(JSON.stringify({ items: [{ accountId, rank: 1, points: 3 }] }), { status: 200 }));
+  vi.stubGlobal('fetch', fetcher);
+  renderApp('/leaderboard');
+  expect(await screen.findByRole('table', { name: 'Bảng xếp hạng' })).toHaveTextContent('3');
+  await waitFor(() => expect(fetcher.mock.calls.some(([url]) => String(url).includes('/leaderboard?limit=20'))).toBe(true));
+  expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/leaderboard/me'))).toBe(false);
+});
+
+it('connects the history route to the signed-in owner lists', async () => {
+  const accountId = 'c4b94753-4f50-4515-925d-59c43299fe2e';
+  const fetcher = vi.fn(async (url: string) => url.endsWith('/auth/me')
+    ? new Response(JSON.stringify({ userId: accountId, email: 'a@example.com' }))
+    : new Response(JSON.stringify({ items: [], nextCursor: null })));
+  vi.stubGlobal('fetch', fetcher);
+  renderApp('/history?scope=account');
+  expect(await screen.findByRole('region', { name: 'Ván đã xong' })).toHaveTextContent('Chưa có ván đã xong.');
+  expect(fetcher.mock.calls.some(([url]) => String(url).includes('/matches/active?scope=account'))).toBe(true);
+});
+
+it('connects a saved match URL to the server board for the signed-in owner', async () => {
+  const accountId = 'c4b94753-4f50-4515-925d-59c43299fe2e';
+  const matchId = '821412da-c99d-45be-a7e9-328fb464380b';
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  const fetcher = vi.fn(async (url: string) => url.endsWith('/auth/me')
+    ? new Response(JSON.stringify({ userId: accountId, email: 'a@example.com' }))
+    : new Response(JSON.stringify({ matchId, ruleVersion: 'v1', boardSize: 20, xScore: 0, oScore: 0, revision: 0,
+      currentGame: { id: matchId, number: 1, openingStone: 'X', aiVersion: null, status: 'InProgress', nextStone: 'X', turnStatus: 'human', aiErrorCode: null, aiRetryAt: null, moves: [] } })));
+  vi.stubGlobal('fetch', fetcher);
+  renderApp(`/play/${matchId}?scope=account`);
+  expect(await screen.findByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).toBeInTheDocument();
+  expect(fetcher.mock.calls.some(([url]) => String(url).includes(`/matches/${matchId}?scope=account`))).toBe(true);
 });

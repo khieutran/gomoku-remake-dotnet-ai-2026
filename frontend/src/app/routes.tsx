@@ -1,8 +1,12 @@
-import { Link, Route, Routes, useSearchParams } from 'react-router-dom';
+import { Link, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
 import { Window } from '../shared/ui/Window';
 import { AuthForms } from '../features/session/AuthForms';
 import { GuestStartButton, OwnerGate } from '../features/session/OwnerGate';
 import { useSession } from '../features/session/sessionContext';
+import { LeaderboardPage } from '../features/leaderboard/LeaderboardPage';
+import { HistoryPage } from '../features/history/HistoryPage';
+import { ReplayPage } from '../features/history/ReplayPage';
+import { MatchPage } from '../features/match/MatchPage';
 
 function Page({ title, children }: { title: string; children: React.ReactNode }) {
   return <Window title={title}><h1 tabIndex={-1}>{title}</h1>{children}</Window>;
@@ -13,15 +17,28 @@ function EntryPage() {
 }
 function PlayEntry() {
   const [params] = useSearchParams();
-  const { session } = useSession();
   const scope = params.get('scope') === 'guest' ? 'guest' : 'account';
-  return <Page title="Bắt đầu chơi"><OwnerGate scope={scope}><p>{session.scope === 'guest' ? 'Phiên khách đã sẵn sàng.' : 'Tài khoản đã sẵn sàng.'} Ván đang chơi sẽ được tìm tại đây.</p></OwnerGate></Page>;
+  return <Page title="Bắt đầu chơi"><OwnerGate scope={scope}><MatchPage scope={scope} /></OwnerGate></Page>;
 }
 function PlayMatch() {
   const [params] = useSearchParams();
+  const { matchId } = useParams();
   const { session } = useSession();
   const scope = params.get('scope') === 'guest' ? 'guest' : params.get('scope') === 'account' ? 'account' : session.scope === 'guest' ? 'guest' : 'account';
-  return <Page title="Ván đang chơi"><OwnerGate scope={scope}><p>Ván đấu sẽ xuất hiện tại đây khi kết nối phiên chơi.</p></OwnerGate></Page>;
+  return <Page title="Ván đang chơi"><OwnerGate scope={scope}><MatchPage scope={scope} matchId={matchId} /></OwnerGate></Page>;
+}
+function HistoryRoute() {
+  const [params] = useSearchParams();
+  const { session } = useSession();
+  const scope = params.get('scope') === 'guest' ? 'guest' : params.get('scope') === 'account' ? 'account' : session.scope === 'guest' ? 'guest' : 'account';
+  return <Window title="Lịch sử ván đấu"><HistoryPage scope={scope} /></Window>;
+}
+function ReplayRoute() {
+  const [params] = useSearchParams();
+  const { gameId } = useParams();
+  const { session } = useSession();
+  const scope = params.get('scope') === 'guest' ? 'guest' : params.get('scope') === 'account' ? 'account' : session.scope === 'guest' ? 'guest' : 'account';
+  return <Window title="Phát lại ván đấu"><ReplayPage scope={scope} gameId={gameId ?? ''} /></Window>;
 }
 export function AppRoutes() {
   return <Routes>
@@ -30,9 +47,9 @@ export function AppRoutes() {
     <Route path="/play/:matchId" element={<PlayMatch />} />
     <Route path="/login" element={<Page title="Đăng nhập"><AuthForms mode="login" /></Page>} />
     <Route path="/register" element={<Page title="Đăng ký"><AuthForms mode="register" /></Page>} />
-    <Route path="/history" element={<Page title="Lịch sử ván đấu"><p>Các ván đã kết thúc và ván đang chơi sẽ được tải theo phiên của bạn.</p><Link to="/">Chọn cách chơi</Link></Page>} />
-    <Route path="/history/:gameId" element={<Page title="Phát lại ván đấu"><p>Xem lại từng nước đi của ván đã kết thúc trong phiên của bạn.</p><Link to="/history">Về lịch sử</Link></Page>} />
-    <Route path="/leaderboard" element={<Page title="Bảng xếp hạng"><p>Điểm và vị trí tài khoản sẽ được lấy từ bảng xếp hạng.</p><p>Khách có thể xem bảng, nhưng không có vị trí riêng.</p></Page>} />
+    <Route path="/history" element={<HistoryRoute />} />
+    <Route path="/history/:gameId" element={<ReplayRoute />} />
+    <Route path="/leaderboard" element={<LeaderboardPage />} />
     <Route path="*" element={<Page title="Không tìm thấy trang"><Link to="/">Về trang chọn cách chơi</Link></Page>} />
   </Routes>;
 }

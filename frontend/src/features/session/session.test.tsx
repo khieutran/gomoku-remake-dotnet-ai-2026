@@ -214,7 +214,7 @@ it('keeps the account visible and explains a failed logout request', async () =>
   renderApp('/play?scope=account');
   await screen.findByText(`account:${accountId}`);
   await user.click(screen.getByRole('button', { name: 'Đăng xuất' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Chưa đăng xuất được');
+  expect(await screen.findByText('Chưa đăng xuất được. Hãy thử lại.')).toHaveAttribute('role', 'alert');
   expect(screen.getByTestId('session')).toHaveTextContent(`account:${accountId}`);
   expect(screen.getByTestId('path').textContent).toBe('/play');
 });
