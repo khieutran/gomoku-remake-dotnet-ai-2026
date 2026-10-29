@@ -57,7 +57,7 @@ bash scripts/verify-phase4.sh preflight
 bash scripts/verify-phase4.sh verify
 ```
 
-Lệnh `verify` dùng Docker để chạy kiểm tra frontend, API và E2E trong stack cô lập. Chi tiết vận hành nằm trong `docs/Detail-phase-4/operations.md` ở workspace phát triển.
+Lệnh `verify` dùng Docker để chạy kiểm tra frontend, API và E2E trong stack cô lập; script tự dọn các container và volume kiểm thử sau khi kết thúc.
 
 ## CI/CD và triển khai
 

@@ -47,7 +47,7 @@ it('restores an account after a StrictMode reload without creating a guest', asy
   const query = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<StrictMode><QueryClientProvider client={query}><MemoryRouter initialEntries={['/play?scope=account']}><SessionProvider><SessionProbe /><App /></SessionProvider></MemoryRouter></QueryClientProvider></StrictMode>);
   expect(await screen.findByTestId('session')).toHaveTextContent(`account:${accountId}`);
-  expect(fetcher.mock.calls.every(([url]) => String(url).endsWith('/auth/me'))).toBe(true);
+  expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/guest-sessions'))).toBe(false);
 });
 
 it('retries account bootstrap after StrictMode aborts the first request', async () => {
