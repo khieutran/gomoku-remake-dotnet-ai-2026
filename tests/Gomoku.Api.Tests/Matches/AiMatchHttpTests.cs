@@ -95,6 +95,77 @@ public sealed class AiMatchHttpTests
     }
 
     [Fact]
+    public async Task MatchCreationHonorsAllStoneAndOpeningChoices()
+    {
+        await using var database = await IsolatedDatabase.CreateAsync();
+        using var factory = database.OpenFactory(workerEnabled: false);
+        using var client = factory.CreateClient();
+        using var guest = await PostAsync(client, "/api/v1/guest-sessions", new { });
+        Assert.Equal(HttpStatusCode.Created, guest.StatusCode);
+
+        foreach (var (humanStone, humanFirst, openingStone, turnStatus) in new[]
+        {
+            ("X", true, "X", "human"),
+            ("X", false, "O", "ai_pending"),
+            ("O", true, "O", "human"),
+            ("O", false, "X", "ai_pending")
+        })
+        {
+            using var response = await PostAsync(client, "/api/v1/matches?scope=guest",
+                new { commandId = "setup-" + Guid.NewGuid(), humanStone, humanFirst });
+            Assert.Equal(humanFirst ? HttpStatusCode.Created : HttpStatusCode.Accepted,
+                response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(humanStone, body.GetProperty("humanStone").GetString());
+            Assert.Equal(openingStone, body.GetProperty("currentGame").GetProperty("openingStone").GetString());
+            Assert.Equal(turnStatus, body.GetProperty("currentGame").GetProperty("turnStatus").GetString());
+        }
+        await using var db = new GomokuDbContext(new DbContextOptionsBuilder<GomokuDbContext>()
+            .UseNpgsql(database.ConnectionString).Options);
+        Assert.Equal(2, await db.AiTurnJobs.CountAsync());
+    }
+
+    [Fact]
+    public async Task BotCanOpenWithXThenAcceptHumanOAndReplyWithX()
+    {
+        await using var database = await IsolatedDatabase.CreateAsync();
+        using var factory = database.OpenFactory();
+        using var client = factory.CreateClient();
+        using var guest = await PostAsync(client, "/api/v1/guest-sessions", new { });
+        Assert.Equal(HttpStatusCode.Created, guest.StatusCode);
+        using var created = await PostAsync(client, "/api/v1/matches?scope=guest",
+            new { commandId = "create-o-" + Guid.NewGuid(), humanStone = "O", humanFirst = false });
+        Assert.Equal(HttpStatusCode.Accepted, created.StatusCode);
+        var start = await created.Content.ReadFromJsonAsync<JsonElement>();
+        var matchId = start.GetProperty("matchId").GetGuid();
+
+        async Task<JsonElement> WaitForRevision(long expected)
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            while (!deadline.IsCancellationRequested)
+            {
+                var state = await client.GetFromJsonAsync<JsonElement>(
+                    $"/api/v1/matches/{matchId}?scope=guest");
+                if (state.GetProperty("revision").GetInt64() >= expected) return state;
+                await Task.Delay(100, deadline.Token);
+            }
+            throw new TimeoutException("Bot did not finish its X turn.");
+        }
+
+        var opened = await WaitForRevision(1);
+        Assert.Equal("X", opened.GetProperty("currentGame").GetProperty("moves")[0]
+            .GetProperty("stone").GetString());
+        Assert.Equal("human", opened.GetProperty("currentGame").GetProperty("turnStatus").GetString());
+        using var human = await PostAsync(client, $"/api/v1/matches/{matchId}/moves?scope=guest",
+            new { commandId = "human-o-" + Guid.NewGuid(), row = 0, column = 0, expectedRevision = 1 });
+        Assert.Equal(HttpStatusCode.Accepted, human.StatusCode);
+        var answered = await WaitForRevision(3);
+        var moves = answered.GetProperty("currentGame").GetProperty("moves");
+        Assert.Equal("O", moves[1].GetProperty("stone").GetString());
+        Assert.Equal("X", moves[2].GetProperty("stone").GetString());
+    }
+
+    [Fact]
     public async Task HumanMoveReturnsBeforeAiAndWorkerPersistsOneReply()
     {
         await using var database = await IsolatedDatabase.CreateAsync();

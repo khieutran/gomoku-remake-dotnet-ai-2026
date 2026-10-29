@@ -55,6 +55,7 @@ public sealed class EfHistoryReader(GomokuDbContext db) : IHistoryReader
                             game.OpeningStone,
                             match.RuleVersion,
                             match.BoardSize,
+                            match.BoardColumns,
                             game.AiVersion,
                             game.StartedAt,
                             FinishedAt = game.FinishedAt!.Value
@@ -76,7 +77,8 @@ public sealed class EfHistoryReader(GomokuDbContext db) : IHistoryReader
             row.RuleStatus.ToString(), row.OpeningStone.ToString(), row.RuleVersion,
             row.BoardSize, row.AiVersion, row.StartedAt, row.FinishedAt,
             moves.Select(move => new HistoryMove(move.Step, move.Row, move.Column,
-                move.Stone.ToString(), move.Actor.ToString(), move.PlayedAt)).ToArray());
+                move.Stone.ToString(), move.Actor.ToString(), move.PlayedAt)).ToArray(),
+            row.BoardColumns);
     }
 
     private IQueryable<StoredMatch> OwnedMatches(OwnerIdentity owner) => db.Matches.AsNoTracking().Where(x =>
@@ -93,16 +95,18 @@ public sealed class EfHistoryReader(GomokuDbContext db) : IHistoryReader
         join match in ownedMatches on game.MatchId equals match.Id
         orderby game.FinishedAt descending, game.Id descending
         select new HistorySummaryRow(game.Id, game.MatchId, game.Number, game.RuleStatus,
-            game.OpeningStone, match.RuleVersion, match.BoardSize, game.AiVersion,
+            game.OpeningStone, match.HumanStone, match.RuleVersion, match.BoardSize,
+            match.BoardColumns, game.AiVersion,
             game.StartedAt, game.FinishedAt!.Value,
             db.Moves.Count(move => move.GameId == game.Id));
 
     private static HistoryGameSummary ToSummary(HistorySummaryRow row) =>
         new(row.GameId, row.MatchId, row.Number, row.RuleStatus.ToString(),
             row.OpeningStone.ToString(), row.RuleVersion, row.BoardSize, row.AiVersion,
-            row.StartedAt, row.FinishedAt, row.MoveCount);
+            row.StartedAt, row.FinishedAt, row.MoveCount, row.HumanStone.ToString(),
+            row.BoardColumns);
 
     private sealed record HistorySummaryRow(Guid GameId, Guid MatchId, int Number,
-        GameStatus RuleStatus, Stone OpeningStone, string RuleVersion, int BoardSize,
-        string? AiVersion, DateTimeOffset StartedAt, DateTimeOffset FinishedAt, int MoveCount);
+        GameStatus RuleStatus, Stone OpeningStone, Stone HumanStone, string RuleVersion, int BoardSize,
+        int? BoardColumns, string? AiVersion, DateTimeOffset StartedAt, DateTimeOffset FinishedAt, int MoveCount);
 }

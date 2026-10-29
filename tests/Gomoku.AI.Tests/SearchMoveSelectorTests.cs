@@ -7,6 +7,15 @@ public sealed class SearchMoveSelectorTests
     private static readonly RuleSet Rules = new(20);
 
     [Fact]
+    public void SearchOpensNearCenterOfRectangularBoard()
+    {
+        var game = Game.Start(new RuleSet(20, 30), Stone.O);
+        var result = new SearchMoveSelector(2026).Analyze(game.Snapshot(), Stone.O,
+            TimeSpan.FromSeconds(1), CancellationToken.None);
+        Assert.Equal(new Position(10, 15), result.Move);
+    }
+
+    [Fact]
     public void ChoosesImmediateWinBeforeOtherMoves()
     {
         var board = Position(
@@ -32,6 +41,50 @@ public sealed class SearchMoveSelectorTests
 
         Assert.Equal(new Position(10, 11), result.Move);
         Assert.Equal(SearchDecisionReason.ImmediateBlock, result.Reason);
+    }
+
+    [Fact]
+    public void BlocksOpenHumanPairBeforeItBecomesAnOpenThree()
+    {
+        var board = Position(
+            x: [(10, 10), (10, 11)],
+            o: [(4, 4), (4, 5)]);
+
+        var result = new SearchMoveSelector(2026).Analyze(board, Rules, Stone.O,
+            TimeSpan.FromSeconds(1), CancellationToken.None);
+
+        Assert.True(result.Move is { } move &&
+            (move == new Position(10, 9) || move == new Position(10, 12)));
+    }
+
+    [Fact]
+    public void BuildsOpenFourWhenAttackOutweighsHumanPair()
+    {
+        var board = Position(
+            x: [(5, 5), (5, 6), (0, 0)],
+            o: [(10, 10), (10, 11), (10, 12)]);
+
+        var result = new SearchMoveSelector(2026).Analyze(board, Rules, Stone.O,
+            TimeSpan.FromSeconds(1), CancellationToken.None);
+
+        Assert.True(result.Move is { } move &&
+            (move == new Position(10, 9) || move == new Position(10, 13)));
+        Assert.Equal(SearchDecisionReason.ThreatAttack, result.Reason);
+    }
+
+    [Fact]
+    public void DefendsOpenHumanThreeWhenOwnAttackIsWeaker()
+    {
+        var board = Position(
+            x: [(5, 5), (5, 6), (5, 7)],
+            o: [(10, 10), (10, 11), (0, 0)]);
+
+        var result = new SearchMoveSelector(2026).Analyze(board, Rules, Stone.O,
+            TimeSpan.FromSeconds(1), CancellationToken.None);
+
+        Assert.True(result.Move is { } move &&
+            (move == new Position(5, 4) || move == new Position(5, 8)));
+        Assert.Equal(SearchDecisionReason.ThreatBlock, result.Reason);
     }
 
     [Fact]
@@ -129,10 +182,8 @@ public sealed class SearchMoveSelectorTests
     public void MidgameCompletesAtLeastOneSearchDepth()
     {
         var board = Position(
-            x: [(8, 8), (8, 10), (9, 7), (9, 10), (10, 9), (10, 12),
-                (11, 8), (11, 11), (12, 9), (12, 12), (13, 8), (13, 11)],
-            o: [(8, 9), (8, 11), (9, 8), (9, 11), (10, 7), (14, 10),
-                (11, 9), (11, 12), (12, 8), (12, 11), (13, 9), (13, 12)]);
+            x: [(2, 2), (2, 8), (2, 14), (8, 2), (8, 8), (8, 14)],
+            o: [(5, 5), (5, 11), (5, 17), (11, 5), (11, 11), (11, 17)]);
 
         var result = new SearchMoveSelector(2026).Analyze(board, Rules, Stone.O,
             TimeSpan.FromSeconds(1), CancellationToken.None);

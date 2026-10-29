@@ -11,7 +11,7 @@ internal static class PatternEvaluator
     {
         var total = 0;
         for (var row = 0; row < board.Size; row++)
-        for (var column = 0; column < board.Size; column++)
+        for (var column = 0; column < board.Columns; column++)
         {
             var start = new Position(row, column);
             if (board.Get(start) != side) continue;
@@ -35,6 +35,33 @@ internal static class PatternEvaluator
         return total;
     }
 
+    public static int ScoreAt(IReadOnlyBoard board, Position move, Stone side)
+    {
+        var total = 0;
+        foreach (var (rowStep, columnStep) in Directions)
+        {
+            var count = 1;
+            var before = new Position(move.Row - rowStep, move.Column - columnStep);
+            while (Contains(board, before) && board.Get(before) == side)
+            {
+                count++;
+                before = new Position(before.Row - rowStep, before.Column - columnStep);
+            }
+
+            var after = new Position(move.Row + rowStep, move.Column + columnStep);
+            while (Contains(board, after) && board.Get(after) == side)
+            {
+                count++;
+                after = new Position(after.Row + rowStep, after.Column + columnStep);
+            }
+
+            var openEnds = (Contains(board, before) && board.Get(before) == Stone.Empty ? 1 : 0) +
+                (Contains(board, after) && board.Get(after) == Stone.Empty ? 1 : 0);
+            total += PatternScore(count, openEnds);
+        }
+        return total;
+    }
+
     private static int PatternScore(int count, int openEnds) => (count, openEnds) switch
     {
         (4, 2) => 5_000,
@@ -50,5 +77,5 @@ internal static class PatternEvaluator
 
     private static bool Contains(IReadOnlyBoard board, Position position) =>
         position.Row >= 0 && position.Row < board.Size &&
-        position.Column >= 0 && position.Column < board.Size;
+        position.Column >= 0 && position.Column < board.Columns;
 }

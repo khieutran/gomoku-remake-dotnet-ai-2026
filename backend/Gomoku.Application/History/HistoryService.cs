@@ -13,7 +13,7 @@ public sealed class HistoryService(IHistoryReader reader, IHistoryCache cache)
         ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 50);
         var revision = await reader.ReadRevisionAsync(owner, cancellationToken);
-        var key = $"history:v1:page:{owner.Scope}:{owner.Id:N}:r{revision}:l{limit}:c{cursor?.Encode() ?? "first"}";
+        var key = $"history:v2:page:{owner.Scope}:{owner.Id:N}:r{revision}:l{limit}:c{cursor?.Encode() ?? "first"}";
         var cached = await cache.GetPageAsync(key, cancellationToken);
         if (cached is not null) return cached;
 

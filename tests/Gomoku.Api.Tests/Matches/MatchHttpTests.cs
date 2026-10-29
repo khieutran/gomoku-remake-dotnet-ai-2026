@@ -243,6 +243,29 @@ public sealed class MatchHttpTests
             .GetProperty("code").GetString());
     }
 
+    [Theory]
+    [InlineData(30)]
+    [InlineData(40)]
+    public async Task CreatePersistsBoardSizeAndRejectsChangedRetry(int boardSize)
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var guest = await PostAsync(client, "/api/v1/guest-sessions");
+        var commandId = "size-" + Guid.NewGuid();
+        using var created = await PostAsync(client, "/api/v1/matches?scope=guest",
+            new { commandId, humanStone = "X", humanFirst = true, boardSize });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var body = await created.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(boardSize, body.GetProperty("boardSize").GetInt32());
+        var matchId = body.GetProperty("matchId").GetGuid();
+        using var read = await client.GetAsync($"/api/v1/matches/{matchId}?scope=guest");
+        Assert.Equal(boardSize, (await read.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("boardSize").GetInt32());
+        using var changed = await PostAsync(client, "/api/v1/matches?scope=guest",
+            new { commandId, humanStone = "X", humanFirst = true, boardSize = boardSize == 30 ? 40 : 30 });
+        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+    }
+
     [Fact]
     public async Task ActivePagesStayStableWhenSeenMatchChangesAndNewMatchIsCreated()
     {

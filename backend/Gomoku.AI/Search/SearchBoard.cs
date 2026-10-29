@@ -9,9 +9,10 @@ internal sealed class SearchBoard : IReadOnlyBoard
     public SearchBoard(BoardSnapshot snapshot)
     {
         Size = snapshot.Size;
-        _cells = new Stone[Size, Size];
+        Columns = snapshot.Columns;
+        _cells = new Stone[Size, Columns];
         for (var row = 0; row < Size; row++)
-        for (var column = 0; column < Size; column++)
+        for (var column = 0; column < Columns; column++)
         {
             var stone = snapshot.Get(new Position(row, column));
             _cells[row, column] = stone;
@@ -20,6 +21,7 @@ internal sealed class SearchBoard : IReadOnlyBoard
     }
 
     public int Size { get; }
+    public int Columns { get; }
     public int OccupiedCount { get; private set; }
 
     public Stone Get(Position position)
@@ -45,5 +47,5 @@ internal sealed class SearchBoard : IReadOnlyBoard
     }
 
     private bool Contains(Position position) => position.Row >= 0 && position.Row < Size &&
-        position.Column >= 0 && position.Column < Size;
+        position.Column >= 0 && position.Column < Columns;
 }

@@ -67,7 +67,7 @@ public sealed class ModelGuidedMoveSelector(IPolicyModelRegistry models, SearchM
 
     private static int[] MaskAndRank(BoardSnapshot board, float[] logits)
     {
-        if (board.Size != 20 || logits.Length != 400)
+        if (board.Size != 20 || board.Columns != 20 || logits.Length != 400)
             throw new PolicyModelException("model_invalid_output");
         var legal = new List<(int Index, float Logit)>(400);
         for (var row = 0; row < 20; row++)

@@ -34,7 +34,8 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
                 movesByGame[game.Id]
                     .Select(move => new MoveRecord(move.Step, move.Row, move.Column,
                         move.Stone, (PlayerActor)move.Actor, move.ActualAiVersion,
-                        move.AiFallbackReason)).ToArray(), game.AiVersion)).ToArray());
+                move.AiFallbackReason)).ToArray(), game.AiVersion)).ToArray(), match.HumanStone,
+            match.BoardColumns);
     }
 
     public async Task<CommandRecord?> FindReceiptAsync(OwnerIdentity owner, string commandId,
@@ -60,7 +61,8 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
             var row = new StoredMatch
             {
                 Id = match.Id, UserId = UserId(match.Owner), GuestSessionId = GuestId(match.Owner),
-                RuleVersion = match.RuleVersion, BoardSize = match.BoardSize,
+                RuleVersion = match.RuleVersion, BoardSize = match.BoardSize, BoardColumns = match.Columns,
+                HumanStone = match.HumanStone,
                 XScore = 0, OScore = 0, CurrentGameId = null, Revision = 0,
                 CreatedAt = now, UpdatedAt = now
             };
@@ -70,6 +72,12 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
             await db.SaveChangesAsync(cancellationToken);
             row.CurrentGameId = match.CurrentGameId;
             db.CommandReceipts.Add(ToStoredReceipt(receipt, now));
+            if (match.Games[0].OpeningStone != match.HumanStone)
+                db.AiTurnJobs.Add(new AiTurnJob
+                {
+                    Id = Guid.NewGuid(), MatchId = match.Id, GameId = match.CurrentGameId,
+                    ExpectedRevision = 0, NextAttemptAt = now, CreatedAt = now
+                });
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             db.ChangeTracker.Clear();
@@ -145,8 +153,9 @@ public sealed class EfGameFlowStore(GomokuDbContext db, TimeProvider clock) : IG
                 if (gameRows != 1) throw new StateIntegrityException("Current Game row is missing.");
             }
 
-            var pendingAi = !completedGame && (addedGame?.OpeningStone == Stone.O ||
-                addedMove is { Actor: PlayerActor.Human } && updated.Games[^1].Moves.Count > 0);
+            var pendingAi = !completedGame && ((addedGame is not null &&
+                    addedGame.OpeningStone != updated.HumanStone) ||
+                (addedMove is { Actor: PlayerActor.Human } && updated.Games[^1].Moves.Count > 0));
             if (pendingAi)
             {
                 db.AiTurnJobs.Add(new AiTurnJob

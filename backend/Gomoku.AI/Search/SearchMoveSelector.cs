@@ -29,13 +29,13 @@ public sealed class SearchMoveSelector(int seed) : IAiMoveAnalyzer
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(rules);
         cancellationToken.ThrowIfCancellationRequested();
-        if (snapshot.Size != rules.BoardSize)
+        if (snapshot.Size != rules.BoardSize || snapshot.Columns != rules.BoardColumns)
             throw new ArgumentException("Board size does not match rules.", nameof(snapshot));
         if (side is not (Stone.X or Stone.O))
             throw new ArgumentOutOfRangeException(nameof(side));
         if (budget < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(budget));
-        if (policyRanks is not null && policyRanks.Length != snapshot.Size * snapshot.Size)
+        if (policyRanks is not null && policyRanks.Length != snapshot.Size * snapshot.Columns)
             throw new ArgumentException("Policy rank count does not match board.", nameof(policyRanks));
 
         var board = new SearchBoard(snapshot);
@@ -77,6 +77,11 @@ public sealed class SearchMoveSelector(int seed) : IAiMoveAnalyzer
                 }
                 finally { board.Undo(move); }
             }
+
+            var tactical = ThreatBalanceEvaluator.Choose(board, candidates, side, clock);
+            if (tactical is not null)
+                return new SearchResult(tactical.Move, tactical.Reason, 0,
+                    clock.Nodes, false);
 
             return new AlphaBetaSearch(board, rules, side, seed, clock, cancellationToken,
                     policyRanks)

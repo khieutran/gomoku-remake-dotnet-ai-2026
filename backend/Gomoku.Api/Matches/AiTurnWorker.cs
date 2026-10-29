@@ -50,7 +50,7 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
                 var result = await PlayClaimAsync(claim, stoppingToken);
                 using var scope = scopeFactory.CreateScope();
                 var jobs = scope.ServiceProvider.GetRequiredService<IAiTurnJobStore>();
-                if (result == "ok")
+                if (result == "ok" || IsStaleJob(result))
                     await jobs.CompleteAsync(claim, stoppingToken);
                 else
                     await jobs.RetryAsync(claim, result, stoppingToken);
@@ -89,17 +89,18 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
 
         var record = await store.LoadAsync(claim.Owner, claim.MatchId, cancellationToken);
         if (record is null) return "match_missing";
+        var aiStone = record.HumanStone == Stone.X ? Stone.O : Stone.X;
         if (record.Revision > claim.ExpectedRevision &&
             record.Games.Any(game => game.Id == claim.GameId &&
-                game.Moves.Any(move => move.Actor == PlayerActor.AI && move.Stone == Stone.O)))
+                game.Moves.Any(move => move.Actor == PlayerActor.AI && move.Stone == aiStone)))
             return "ok";
         if (record.Revision != claim.ExpectedRevision || record.CurrentGameId != claim.GameId)
             return "stale_ai_job";
 
         var game = MatchReplayer.Replay(record).Snapshot().CurrentGame;
-        if (game.Status != GameStatus.InProgress || game.NextStone != Stone.O)
+        if (game.Status != GameStatus.InProgress || game.NextStone != aiStone)
             return "wrong_ai_turn";
-        var selected = await SelectWithFallbackAsync(game, record.Games[^1].AiVersion,
+        var selected = await SelectWithFallbackAsync(game, aiStone, record.Games[^1].AiVersion,
             services.GetRequiredService<IAiMoveSelector>(),
             services.GetRequiredService<ModelGuidedMoveSelector>(), cancellationToken);
         if (selected.Move is not { } move) return "ai_no_move";
@@ -112,7 +113,7 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
     }
 
     private async Task<(Position? Move, AiMoveMetadata Metadata)> SelectWithFallbackAsync(
-        GameSnapshot game, string? pinnedVersion, IAiMoveSelector selector,
+        GameSnapshot game, Stone aiStone, string? pinnedVersion, IAiMoveSelector selector,
         ModelGuidedMoveSelector modelSelector, CancellationToken cancellationToken)
     {
         Position? move = null;
@@ -123,7 +124,7 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
         var actualVersion = AiVersions.SearchV1;
         if (pinnedVersion == AiVersions.LegalV1)
         {
-            move = LegalFallback.SelectMove(game, Stone.O, TimeSpan.Zero, cancellationToken);
+            move = LegalFallback.SelectMove(game, aiStone, TimeSpan.Zero, cancellationToken);
             return (move, new AiMoveMetadata(AiVersions.LegalV1, null));
         }
         if (pinnedVersion != AiVersions.SearchV1 && !modelPinned)
@@ -142,11 +143,11 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
                 try
                 {
                     if (modelPinned)
-                        return modelSelector.Analyze(game, Stone.O, pinnedVersion!,
+                        return modelSelector.Analyze(game, aiStone, pinnedVersion!,
                             SearchBudget, timeout.Token);
                     var search = selector is IAiMoveAnalyzer analyzer
-                        ? analyzer.Analyze(game, Stone.O, SearchBudget, timeout.Token)
-                        : new SearchResult(selector.SelectMove(game, Stone.O, SearchBudget,
+                        ? analyzer.Analyze(game, aiStone, SearchBudget, timeout.Token)
+                        : new SearchResult(selector.SelectMove(game, aiStone, SearchBudget,
                             timeout.Token), SearchDecisionReason.Search, 0, 0, false);
                     return new VersionedSearchResult(search, AiVersions.SearchV1, null);
                 }
@@ -195,7 +196,7 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
             // bounded pure-search attempt lets the turn finish without the model.
             try
             {
-                var rescue = SearchFallback.Analyze(game, Stone.O,
+                var rescue = SearchFallback.Analyze(game, aiStone,
                     ModelFailureSearchBudget, cancellationToken);
                 move = rescue.Move;
                 actualVersion = rescue.Reason == SearchDecisionReason.Fallback
@@ -213,7 +214,7 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
                 fallbackReason, pinnedVersion);
             if (!modelPinned || move is null || !IsLegal(game.Board, move.Value))
             {
-                move = LegalFallback.SelectMove(game, Stone.O, TimeSpan.Zero,
+                move = LegalFallback.SelectMove(game, aiStone, TimeSpan.Zero,
                     cancellationToken);
                 actualVersion = AiVersions.LegalV1;
             }
@@ -223,5 +224,8 @@ public sealed class AiTurnWorker(IServiceScopeFactory scopeFactory,
 
     private static bool IsLegal(BoardSnapshot board, Position move) =>
         move.Row >= 0 && move.Row < board.Size && move.Column >= 0 &&
-        move.Column < board.Size && board.Get(move) == Stone.Empty;
+        move.Column < board.Columns && board.Get(move) == Stone.Empty;
+
+    private static bool IsStaleJob(string result) => result is
+        "match_missing" or "stale_ai_job" or "wrong_ai_turn";
 }

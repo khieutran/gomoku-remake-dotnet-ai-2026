@@ -353,6 +353,9 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                     b.Property<int>("BoardSize")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("BoardColumns")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -361,6 +364,13 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("GuestSessionId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("HumanStone")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1)
+                        .HasColumnType("character varying(1)")
+                        .HasDefaultValue("X");
 
                     b.Property<int>("OScore")
                         .HasColumnType("integer");
@@ -395,6 +405,10 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                     b.ToTable("Matches", null, t =>
                         {
                             t.HasCheckConstraint("CK_Match_BoardSize", "\"BoardSize\" > 0");
+
+                            t.HasCheckConstraint("CK_Match_BoardColumns", "\"BoardColumns\" IS NULL OR \"BoardColumns\" > 0");
+
+                            t.HasCheckConstraint("CK_Match_HumanStone", "\"HumanStone\" IN ('X', 'O')");
 
                             t.HasCheckConstraint("CK_Match_Nonnegative", "\"XScore\" >= 0 AND \"OScore\" >= 0 AND \"Revision\" >= 0");
 

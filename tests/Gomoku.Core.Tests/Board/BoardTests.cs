@@ -5,6 +5,29 @@ namespace Gomoku.Core.Tests;
 public sealed class BoardTests
 {
     [Fact]
+    public void RectangularBoardHasThirtyPlayableColumnsAndTwentyRows()
+    {
+        var board = new Board(20, 30);
+        Assert.Equal(20, board.Size);
+        Assert.Equal(30, board.Columns);
+        Assert.True(board.TryPlace(new Position(19, 29), Stone.X));
+        Assert.False(board.TryPlace(new Position(20, 0), Stone.X));
+        Assert.False(board.TryPlace(new Position(0, 30), Stone.X));
+        Assert.Equal(30, board.Snapshot().Columns);
+    }
+
+    [Fact]
+    public void FiveStonesAtRightEdgeWinOnRectangularBoard()
+    {
+        var board = new Board(20, 30);
+        for (var column = 25; column < 30; column++)
+            Assert.True(board.TryPlace(new Position(7, column), Stone.X));
+
+        Assert.Equal(GameStatus.XWon, RuleEvaluator.Evaluate(board.Snapshot(),
+            new Position(7, 29), Stone.X, new RuleSet(20, 30)));
+    }
+
+    [Fact]
     public void NewBoardHasTwentyEmptyRowsAndColumns()
     {
         var board = new Board(20);

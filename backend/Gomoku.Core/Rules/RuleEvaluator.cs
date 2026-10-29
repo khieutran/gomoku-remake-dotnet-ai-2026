@@ -15,12 +15,12 @@ public static class RuleEvaluator
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(rules);
 
-        if (board.Size != rules.BoardSize)
+        if (board.Size != rules.BoardSize || board.Columns != rules.BoardColumns)
         {
             throw new ArgumentException("Board size does not match the rule set.", nameof(board));
         }
 
-        if (lastMove.Row < 0 || lastMove.Row >= board.Size || lastMove.Column < 0 || lastMove.Column >= board.Size)
+        if (lastMove.Row < 0 || lastMove.Row >= board.Size || lastMove.Column < 0 || lastMove.Column >= board.Columns)
         {
             throw new ArgumentOutOfRangeException(nameof(lastMove));
         }
@@ -55,7 +55,7 @@ public static class RuleEvaluator
 
         for (var row = 0; row < board.Size; row++)
         {
-            for (var column = 0; column < board.Size; column++)
+            for (var column = 0; column < board.Columns; column++)
             {
                 if (board.Get(new Position(row, column)) == Stone.Empty)
                 {
@@ -73,7 +73,7 @@ public static class RuleEvaluator
         var row = start.Row + rowStep;
         var column = start.Column + columnStep;
 
-        while (row >= 0 && row < board.Size && column >= 0 && column < board.Size &&
+        while (row >= 0 && row < board.Size && column >= 0 && column < board.Columns &&
                board.Get(new Position(row, column)) == stone)
         {
             count++;
@@ -86,6 +86,6 @@ public static class RuleEvaluator
 
     private static bool IsOpponentAt(IReadOnlyBoard board, Position position, Stone opponent) =>
         position.Row >= 0 && position.Row < board.Size &&
-        position.Column >= 0 && position.Column < board.Size &&
+        position.Column >= 0 && position.Column < board.Columns &&
         board.Get(position) == opponent;
 }

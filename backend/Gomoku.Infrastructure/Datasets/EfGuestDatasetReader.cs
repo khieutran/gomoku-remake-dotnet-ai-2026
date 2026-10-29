@@ -65,7 +65,8 @@ public sealed class EfGuestDatasetReader : IGuestDatasetReader
                         moves.Where(move => move.GameId == game.Id)
                             .Select(move => new MoveRecord(move.Step, move.Row, move.Column,
                                 move.Stone, (PlayerActor)move.Actor, move.ActualAiVersion,
-                                move.AiFallbackReason)).ToArray(), game.AiVersion)).ToArray());
+                                move.AiFallbackReason)).ToArray(), game.AiVersion)).ToArray(),
+                    match.HumanStone, match.BoardColumns);
                 yield return new GuestMatchSource(record,
                     matchGames.ToDictionary(game => game.Id, game => game.FinishedAt),
                     match.CreatedAt);

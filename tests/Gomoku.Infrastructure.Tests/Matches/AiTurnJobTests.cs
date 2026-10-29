@@ -115,6 +115,7 @@ public sealed class AiTurnJobTests
             .SingleAsync(x => x.GameId == fourth.GameId && x.Stone == Gomoku.Core.Stone.O);
         Assert.Equal("legal-v1", storedMove.ActualAiVersion);
         Assert.Equal("ai_timeout", storedMove.AiFallbackReason);
+        Assert.Equal(1, await db.AiTurnJobs.CountAsync(x => x.GameId == fourth.GameId));
 
         // Simulate process death after O committed, before CompleteAsync.
         await db.AiTurnJobs.Where(x => x.Id == fourth.JobId)

@@ -1,3 +1,5 @@
+using Gomoku.Core;
+
 namespace Gomoku.Infrastructure.Persistence;
 
 public sealed class StoredMatch
@@ -7,6 +9,8 @@ public sealed class StoredMatch
     public Guid? GuestSessionId { get; set; }
     public required string RuleVersion { get; set; }
     public int BoardSize { get; set; }
+    public int? BoardColumns { get; set; }
+    public Stone HumanStone { get; set; } = Stone.X;
     public int XScore { get; set; }
     public int OScore { get; set; }
     public Guid? CurrentGameId { get; set; }

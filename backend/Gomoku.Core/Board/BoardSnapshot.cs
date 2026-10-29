@@ -10,10 +10,11 @@ public sealed class BoardSnapshot : IReadOnlyBoard
     }
 
     public int Size => _cells.GetLength(0);
+    public int Columns => _cells.GetLength(1);
 
     public Stone Get(Position position)
     {
-        if (position.Row < 0 || position.Row >= Size || position.Column < 0 || position.Column >= Size)
+        if (position.Row < 0 || position.Row >= Size || position.Column < 0 || position.Column >= Columns)
         {
             throw new ArgumentOutOfRangeException(nameof(position));
         }

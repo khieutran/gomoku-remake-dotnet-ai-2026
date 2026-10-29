@@ -5,14 +5,16 @@ namespace Gomoku.Application.History;
 
 public sealed record HistoryGameSummary(Guid GameId, Guid MatchId, int Number,
     string Status, string OpeningStone, string RuleVersion, int BoardSize, string? AiVersion,
-    DateTimeOffset StartedAt, DateTimeOffset FinishedAt, int MoveCount);
+    DateTimeOffset StartedAt, DateTimeOffset FinishedAt, int MoveCount, string? HumanStone = null,
+    int? BoardColumns = null);
 
 public sealed record HistoryMove(int Step, int Row, int Column, string Stone, string Actor,
     DateTimeOffset PlayedAt);
 
 public sealed record HistoryGameDetail(Guid GameId, Guid MatchId, int Number,
     string Status, string OpeningStone, string RuleVersion, int BoardSize, string? AiVersion,
-    DateTimeOffset StartedAt, DateTimeOffset FinishedAt, IReadOnlyList<HistoryMove> Moves);
+    DateTimeOffset StartedAt, DateTimeOffset FinishedAt, IReadOnlyList<HistoryMove> Moves,
+    int? BoardColumns = null);
 
 public sealed record HistoryPage(IReadOnlyList<HistoryGameSummary> Items, string? NextCursor);
 
