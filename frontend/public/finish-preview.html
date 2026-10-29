@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gomoku · hoạt cảnh kết thúc</title>
+  <style>
+    :root { --ink: #493039; --cream: #ffead4; --yellow: #ffd36e; --pink: #a62d55; --teal: #1b6268; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; padding: clamp(14px, 3vw, 34px); color: var(--ink); background-color: #dbe7fb; background-image: linear-gradient(#fffb 2px, transparent 2px), linear-gradient(90deg, #fffb 2px, transparent 2px); background-size: 30px 30px; font: 600 16px/1.45 system-ui, sans-serif; }
+    main { width: min(100%, 1250px); margin: auto; }
+    h1 { margin: 0 0 8px; font: 900 clamp(1.5rem, 3vw, 2.2rem)/1.2 Georgia, serif; }
+    .intro { margin: 0 0 22px; }
+    .examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .window { min-width: 0; border: 4px solid #70494c; background: var(--cream); box-shadow: 7px 7px 0 #70494c; }
+    .bar { padding: 8px 14px; border-bottom: 4px solid #70494c; background: #61c2ba; font: 800 1rem/1.2 'Courier New', monospace; }
+    .body { padding: clamp(10px, 1.8vw, 20px); }
+    h2 { margin: 0 0 8px; font-size: 1.2rem; }
+    .body > p { margin: 0 0 14px; min-height: 3em; }
+    .arena { position: relative; width: 100%; aspect-ratio: 3 / 2; overflow: hidden; border: 3px solid #70494c; background-color: #f4d8af; background-image: linear-gradient(#b88c72 1px, transparent 1px), linear-gradient(90deg, #b88c72 1px, transparent 1px); background-size: 3.333333% 5%; isolation: isolate; }
+    .win-line { position: absolute; left: 17%; top: 44%; display: flex; width: 64%; justify-content: space-between; }
+    .win-line span { display: grid; place-items: center; width: 12%; aspect-ratio: 1; color: var(--pink); font: 900 clamp(1.1rem, 3.1vw, 2.2rem)/1 'Courier New', monospace; }
+    .scene { position: absolute; inset: 0; background: #281f2ab3; opacity: 0; }
+    .chicken { position: absolute; width: 27%; right: 17%; bottom: 14%; overflow: visible; filter: drop-shadow(5px 7px 0 #271e28); }
+    .finisher { position: absolute; display: grid; place-items: center; width: 16%; aspect-ratio: 1; color: #fff0d6; background: var(--pink); border: 4px solid #411d2c; box-shadow: 5px 5px 0 #271e28; font: 900 clamp(1.2rem, 4vw, 3.5rem)/1 'Courier New', monospace; }
+    .ko .finisher { left: 43%; top: -32%; transform: rotate(-15deg); }
+    .stone { position: absolute; left: -18%; top: 41%; width: 12%; aspect-ratio: 1; border: 4px solid #4a3039; border-radius: 50%; background: #85818b; box-shadow: inset -7px -7px 0 #59555d, 5px 7px 0 #271e28; }
+    .feather { position: absolute; left: 60%; top: 53%; width: 10px; height: 27px; border: 3px solid #713446; border-radius: 80% 0 80% 0; background: #fff0d6; opacity: 0; }
+    .feather--a { --dx: -90px; --dy: -70px; --rot: -75deg; }
+    .feather--b { --dx: 75px; --dy: -85px; --rot: 50deg; }
+    .feather--c { --dx: 110px; --dy: 10px; --rot: 95deg; }
+    .feather--d { --dx: -70px; --dy: 70px; --rot: -25deg; }
+    .burst { position: absolute; left: 54%; top: 36%; color: var(--yellow); font: 900 clamp(2rem, 7vw, 5rem)/1 'Courier New', monospace; opacity: 0; text-shadow: 4px 4px 0 #482536; }
+    .result { position: absolute; inset: auto 9% 8%; padding: 8px 12px; border: 4px solid #482536; background: var(--yellow); box-shadow: 5px 5px 0 #482536; text-align: center; font: 900 clamp(1rem, 2.4vw, 1.7rem)/1.2 'Courier New', monospace; opacity: 0; }
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    button { min-height: 44px; padding: 8px 16px; border: 3px solid #70494c; background: var(--yellow); color: var(--ink); box-shadow: 3px 3px 0 #70494c; font: inherit; font-weight: 800; cursor: pointer; }
+    button:focus-visible { outline: 3px solid var(--pink); outline-offset: 4px; }
+    .note { font-size: .86rem; }
+    .playing .win-line span { animation: line-glow 2.25s both; }
+    .playing .win-line span:nth-child(2) { animation-delay: 55ms; }
+    .playing .win-line span:nth-child(3) { animation-delay: 110ms; }
+    .playing .win-line span:nth-child(4) { animation-delay: 165ms; }
+    .playing .win-line span:nth-child(5) { animation-delay: 220ms; }
+    .playing .scene { animation: dim-in 2.25s both; }
+    .playing .feather { animation: feather-fly 2.25s both; }
+    .playing .burst { animation: burst-in 2.25s both; }
+    .playing .result { animation: result-in 2.25s both; }
+    .ko.playing .finisher { animation: piece-drop 2.25s both; }
+    .ko.playing .chicken { animation: chicken-ko 2.25s both; }
+    .stone-hit.playing .stone { animation: stone-throw 2.25s both; }
+    .stone-hit.playing .chicken { animation: chicken-hit 2.25s both; }
+    @keyframes line-glow { 0%, 8% { background: transparent; box-shadow: none; } 16%, 37% { background: #ffe777; box-shadow: inset 0 0 0 3px #b34b51, 0 0 0 5px #fff3b7; } 44%, 100% { background: #ffe777; box-shadow: inset 0 0 0 3px #b34b51; } }
+    @keyframes dim-in { 0%, 26% { opacity: 0; } 38%, 75% { opacity: 1; } 100% { opacity: .74; } }
+    @keyframes piece-drop { 0%, 29% { top: -32%; transform: rotate(-15deg) scale(1); } 44% { top: 24%; transform: rotate(10deg) scale(1.22); } 49%, 100% { top: 28%; transform: rotate(-5deg) scale(1); } }
+    @keyframes stone-throw { 0%, 29% { left: -18%; top: 42%; transform: scale(.8); } 43% { left: 51%; top: 49%; transform: scale(1.25); } 49%, 100% { left: 57%; top: 53%; transform: scale(.8); } }
+    @keyframes chicken-ko { 0%, 37% { transform: translate(0) rotate(0) scale(1); opacity: 1; } 44% { transform: translate(0, 16%) rotate(-14deg) scale(1.15, .65); } 53% { transform: translate(8%, -16%) rotate(32deg) scale(1); } 66%, 100% { transform: translate(28%, 82%) rotate(110deg) scale(.7); opacity: 0; } }
+    @keyframes chicken-hit { 0%, 39% { transform: translate(0) rotate(0); opacity: 1; } 46% { transform: translate(10%, -6%) rotate(22deg); } 66%, 100% { transform: translate(145%, -45%) rotate(95deg); opacity: 0; } }
+    @keyframes feather-fly { 0%, 42% { opacity: 0; transform: translate(0) rotate(0); } 49% { opacity: 1; } 72%, 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); } }
+    @keyframes burst-in { 0%, 41% { opacity: 0; transform: scale(.3) rotate(-20deg); } 47% { opacity: 1; transform: scale(1.2) rotate(10deg); } 59%, 100% { opacity: 0; transform: scale(1.8) rotate(20deg); } }
+    @keyframes result-in { 0%, 75% { opacity: 0; transform: translateY(20px) scale(.9); } 86%, 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    @media (max-width: 850px) { .examples { grid-template-columns: 1fr; } .body > p { min-height: 0; } }
+    @media (prefers-reduced-motion: reduce) { .playing *, .playing { animation: none !important; } .scene { opacity: .74; } .chicken, .stone, .finisher, .feather, .burst { display: none; } .result { opacity: 1; } .win-line span { background: #ffe777; box-shadow: inset 0 0 0 2px #b34b51; } }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute"><symbol id="chicken-art" viewBox="0 0 100 100"><path d="M19 42h12V28h43v11h10v31H69v10H31V69H19z" fill="#fff0d6" stroke="#5c3440" stroke-width="5" stroke-linejoin="miter"/><path d="M42 28V17h9v-8h10v8h10v11" fill="#d84b5d" stroke="#5c3440" stroke-width="4"/><path d="M82 39h15l-10 12h-5" fill="#ffd36e" stroke="#5c3440" stroke-width="4"/><rect x="68" y="36" width="6" height="6" fill="#32212d"/><path d="M22 52l-15-8 8 22 12 5M37 79v10h-9m32-10v10h9" fill="none" stroke="#5c3440" stroke-width="5"/><path d="M40 48h21v18H40z" fill="#f5d4ad" stroke="#5c3440" stroke-width="4"/></symbol></svg>
+  <main>
+    <h1>Hai hoạt cảnh kết thúc ván</h1>
+    <p class="intro">Mỗi bản đều làm sáng năm quân thắng trước, rồi mới phát hoạt cảnh và hiện người thắng. Bấm nút để xem lại.</p>
+    <div class="examples">
+      <section class="window"><div class="bar">Bản 1 · Gà KO</div><div class="body"><h2>Quân thắng giáng xuống</h2><p>Gà bật lông, xoay ra khỏi bàn; kết quả hiện sau cú va chạm.</p><div class="arena ko playing" aria-label="Bản xem trước gà KO"><div class="win-line"><span>X</span><span>X</span><span>X</span><span>X</span><span>X</span></div><div class="scene"></div><svg class="chicken" aria-hidden="true"><use href="#chicken-art"/></svg><div class="finisher">X</div><i class="feather feather--a"></i><i class="feather feather--b"></i><i class="feather feather--c"></i><i class="feather feather--d"></i><b class="burst">KO!</b><div class="result">Bạn thắng · X</div></div><div class="controls"><button type="button" data-replay="ko">Xem lại bản 1</button><span class="note">Vui, rõ kết quả</span></div></div></section>
+      <section class="window"><div class="bar">Bản 2 · Đá chọi</div><div class="body"><h2>Viên đá bay theo đường thắng</h2><p>Đá lao ngang vào gà; gà bật khỏi khung và lông bay theo.</p><div class="arena stone-hit playing" aria-label="Bản xem trước đá chọi"><div class="win-line"><span>X</span><span>X</span><span>X</span><span>X</span><span>X</span></div><div class="scene"></div><svg class="chicken" aria-hidden="true"><use href="#chicken-art"/></svg><div class="stone"></div><i class="feather feather--a"></i><i class="feather feather--b"></i><i class="feather feather--c"></i><i class="feather feather--d"></i><b class="burst">BỐP!</b><div class="result">Bạn thắng · X</div></div><div class="controls"><button type="button" data-replay="stone-hit">Xem lại bản 2</button><span class="note">Nhanh, mạnh</span></div></div></section>
+    </div>
+  </main>
+  <script>
+    document.querySelectorAll('[data-replay]').forEach(button => button.addEventListener('click', () => {
+      const arena = document.querySelector(`.arena.${button.dataset.replay}`);
+      arena.classList.remove('playing');
+      void arena.offsetWidth;
+      arena.classList.add('playing');
+    }));
+  </script>
+</body>
+</html>
