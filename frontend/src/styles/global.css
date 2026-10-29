@@ -73,3 +73,14 @@ p { max-width: 65ch; margin: 0 0 1rem; }
 @media (max-width: 700px) { .app-shell { padding: 12px 12px 8px; } .site-header { gap: 12px; margin-bottom: 12px; } .brand { font-size: 1.5rem; } .brand-mark { padding: 6px 4px; } .site-header nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 8px; } .site-header nav a, .site-header nav .nav-action { min-width: 0; padding: 7px 4px; font-size: .875rem; } .window-body { padding: 14px; } .game-workspace { gap: 12px; } .game-workspace-side { grid-template-columns: minmax(0, 1fr); gap: 12px; } .game-workspace--entry .game-workspace-side { display: none; } .entry-mobile-note { display: block; margin: 12px auto 0; max-width: 390px; font-size: .875rem; } .entry-mobile-note p { margin: 8px 0 0; } .entry-board-stage { width: min(100%, calc(100dvh - 270px)); aspect-ratio: 1; } .start-board-overlay { padding: 5px; } .start-menu { gap: 6px; padding: 8px; } .start-menu h1 { font-size: 1.25rem; } .start-choice { padding: 0 2px 2px; gap: 4px; } .start-choice legend { font-size: .875rem; } .start-choice label { min-height: 44px; padding: 2px; font-size: .875rem; } .entry-actions { gap: 4px; } .entry-actions .button { min-height: 44px; padding: 5px 8px; } .game-workspace--match { grid-template-areas: 'status' 'main' 'score'; } .game-workspace--match .game-workspace-main { grid-area: main; } .game-workspace--match .game-workspace-side { display: contents; } .game-workspace--match .game-workspace-side > :first-child { grid-area: status; } .game-workspace--match .game-workspace-side > :last-child { grid-area: score; } }
 @media (prefers-reduced-motion: no-preference) { .button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); } }
 @media (max-width: 700px) { .start-choice { padding-bottom: 0; } }
+@media (max-width: 700px) {
+  .site-header { flex-wrap: nowrap; gap: 8px; }
+  .brand { flex: none; gap: 6px; font-size: 1.15rem; }
+  .brand-mark { padding: 7px 4px; }
+  .site-header nav { flex: 1; width: auto; gap: 5px; }
+  .site-header nav a, .site-header nav .nav-action { min-height: 44px; padding: 6px 2px; font-size: .75rem; white-space: nowrap; }
+  .game-workspace--match .game-workspace-main > .window .window-body { padding: 8px; }
+}
+@media (max-width: 360px) {
+  .brand span:last-child { display: none; }
+}

@@ -33,7 +33,7 @@
 
 @media (max-width: 700px) {
   .match-window .window-body { padding: 12px; }
-  .match-board-stage { width: min(100%, max(180px, calc(100dvh - 430px))); }
+  .match-board-stage { width: 100%; }
   .match-board-stage:has(.gomoku-board--wide) { width: 100%; }
   .match-status-panel, .match-score-panel { padding: 0; }
   .game-workspace--match .game-workspace-side > .window .window-body { padding: 8px 12px; }
