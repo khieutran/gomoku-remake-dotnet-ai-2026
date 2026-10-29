@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=finish-cutscenes.html">
+  <title>Gomoku · Demo hoạt cảnh kết thúc</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; background: #dce8fb; color: #493039; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: clamp(16px, 4vw, 48px); background-image: linear-gradient(#fff9 1px, transparent 1px), linear-gradient(90deg, #fff9 1px, transparent 1px); background-size: 32px 32px; }
+    main { max-width: 1280px; margin: auto; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: clamp(24px, 4vw, 42px); margin-bottom: 8px; }
+    .intro { max-width: 70ch; line-height: 1.5; }
+    section { margin-top: 36px; }
+    h2 { border-bottom: 3px solid #70494c; padding-bottom: 9px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; }
+    article { background: #ffead4; border: 3px solid #70494c; box-shadow: 7px 7px 0 #70494c; overflow: hidden; }
+    article > header { background: #61c2ba; border-bottom: 3px solid #70494c; padding: 10px 14px; font-weight: 800; }
+    video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #493039; }
+    .detail { padding: 14px; }
+    .detail p { min-height: 3em; line-height: 1.5; margin-bottom: 12px; }
+    button { cursor: pointer; border: 2px solid #70494c; background: #ffd36e; color: #493039; font: inherit; font-weight: 800; padding: 9px 16px; box-shadow: 3px 3px 0 #70494c; }
+    button:hover { background: #ffe5a0; }
+    button:focus-visible, video:focus-visible { outline: 3px solid #a62d55; outline-offset: 3px; }
+    .note { font-size: .9rem; opacity: .8; margin-top: 38px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>6 hoạt cảnh kết thúc trận</h1>
+    <p class="intro">Bản demo 2D để chọn hướng hình ảnh trước khi gắn vào luồng thắng của game. Mỗi video dài 4 giây, không có âm thanh. Bấm vào video hoặc nút “Phát lại” để xem.</p>
+
+    <section aria-labelledby="human-title">
+      <h2 id="human-title">Người chơi thắng · X</h2>
+      <div class="grid">
+        <article><header>01 · Chém đứt đường cờ</header><video controls playsinline preload="metadata" src="videos/finish/human-sword.webm" aria-label="Hoạt cảnh kiếm chém qua năm quân X"></video><div class="detail"><p>Năm quân X sáng lên, đường kiếm quét qua và quân O vỡ ra.</p><button type="button">Phát lại</button></div></article>
+        <article><header>02 · Shutdown AI</header><video controls playsinline preload="metadata" src="videos/finish/human-shutdown.webm" aria-label="Hoạt cảnh AI bị quá tải và tắt nguồn"></video><div class="detail"><p>Bàn cờ nhiễu sóng, chip AI quá tải rồi tắt nguồn.</p><button type="button">Phát lại</button></div></article>
+        <article><header>03 · Mưa tên X</header><video controls playsinline preload="metadata" src="videos/finish/human-arrows.webm" aria-label="Hoạt cảnh các quân X bắn mũi tên vào quân O"></video><div class="detail"><p>Các quân X bắn đồng loạt; quân O nổ thành các mảnh nhỏ.</p><button type="button">Phát lại</button></div></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="bot-title">
+      <h2 id="bot-title">Bot thắng · O</h2>
+      <div class="grid">
+        <article><header>04 · Cắt cổ gà</header><video controls playsinline preload="metadata" src="videos/finish/bot-chicken.webm" aria-label="Hoạt cảnh đường thắng O cắt ngang bàn cờ với biểu tượng gà"></video><div class="detail"><p>Năm quân O tạo đường cắt, bàn cờ tách đôi và gà kêu bằng chữ.</p><button type="button">Phát lại</button></div></article>
+        <article><header>05 · Lấy thịt đè người</header><video controls playsinline preload="metadata" src="videos/finish/bot-hammer.webm" aria-label="Hoạt cảnh búa từ quân O giáng xuống bàn cờ"></video><div class="detail"><p>Hàng O biến thành búa khổng lồ, giáng xuống các quân X.</p><button type="button">Phát lại</button></div></article>
+        <article><header>06 · Delete Player</header><video controls playsinline preload="metadata" src="videos/finish/bot-delete.webm" aria-label="Hoạt cảnh con trỏ của AI xóa người chơi"></video><div class="detail"><p>Con trỏ của bot chọn quân X, xác nhận Delete rồi đưa vào thùng rác.</p><button type="button">Phát lại</button></div></article>
+      </div>
+    </section>
+    <p class="note">Video mẫu 800 × 450, VP8/WebM. Chưa gắn vào game.</p>
+  </main>
+  <script>
+    document.querySelectorAll('article').forEach((card) => {
+      const video = card.querySelector('video');
+      card.querySelector('button').addEventListener('click', () => {
+        video.currentTime = 0;
+        video.play();
+      });
+    });
+  </script>
+</body>
+</html>

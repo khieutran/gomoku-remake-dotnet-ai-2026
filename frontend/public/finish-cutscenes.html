@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gomoku · Hoạt cảnh nhiều pose</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #ffebc9; background: #1c1830; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1100px; margin: auto; }
+    h1 { font-size: clamp(28px, 4vw, 44px); margin: 12px 0; }
+    .intro { color: #c8c5d3; line-height: 1.6; max-width: 75ch; }
+    h2 { margin: 44px 0 18px; color: #ffcf65; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 22px; }
+    article { background: #263651; border: 2px solid #91afc0; box-shadow: 7px 7px 0 #10101c; }
+    article h3 { margin: 0; padding: 14px 16px; font-size: 1.1rem; }
+    video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #1c1830; }
+    .detail { padding: 14px 16px 18px; }
+    .detail p { min-height: 2.7em; margin: 0 0 16px; color: #dddce6; line-height: 1.5; }
+    button { background: #ffcf65; color: #261b31; border: 2px solid #261b31; padding: 10px 16px; font: inherit; font-weight: 750; cursor: pointer; }
+    button:hover { background: #ffebc9; }
+    button:focus-visible, video:focus-visible { outline: 3px solid #ffcf65; outline-offset: 3px; }
+    footer { color: #aaa8b8; margin: 40px 0; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Hoạt cảnh kết thúc · bản nhiều pose</h1>
+    <p class="intro">Bốn video 2D độc lập với bàn cờ. Nhân vật đổi pose theo từng nhịp hành động; nền, tia lửa và hiệu ứng va chạm là các lớp riêng. Đây là bản xem thử, chưa gắn vào luồng chơi.</p>
+    <section aria-labelledby="human-title">
+      <h2 id="human-title">Người thắng</h2>
+      <div class="grid">
+        <article><h3>01 · Kiếm chém robot</h3><video controls playsinline preload="metadata" src="videos/finish/frame-sword-v2.webm" aria-label="Hiệp sĩ chạy, lấy đà, chém và đầu robot rơi"></video><div class="detail"><p>Đứng → chạy → lấy đà → vung kiếm → đầu robot rơi.</p><button type="button">Phát lại</button></div></article>
+        <article><h3>02 · Mũi tên trúng đầu robot</h3><video controls playsinline preload="metadata" src="videos/finish/frame-arrow.webm" aria-label="Hiệp sĩ kéo cung, thả tên và bắn trúng đầu robot"></video><div class="detail"><p>Ngắm → thả dây cung → tên bay → đầu robot nổ.</p><button type="button">Phát lại</button></div></article>
+      </div>
+    </section>
+    <section aria-labelledby="robot-title">
+      <h2 id="robot-title">Bot thắng</h2>
+      <div class="grid">
+        <article><h3>03 · Robot đốt người chơi</h3><video controls playsinline preload="metadata" src="videos/finish/frame-fire.webm" aria-label="Robot ngắm bắn, phun lửa và hiệp sĩ nhảy dựng lên"></video><div class="detail"><p>Robot ngắm → phun lửa → hiệp sĩ hoảng hốt nhảy lên.</p><button type="button">Phát lại</button></div></article>
+        <article><h3>04 · Phóng điện biến thành gà</h3><video controls playsinline preload="metadata" src="videos/finish/frame-electric.webm" aria-label="Robot ngắm, phóng điện và biến hiệp sĩ thành gà"></video><div class="detail"><p>Robot ngắm → phóng điện → hiệp sĩ giật mình → biến thành gà.</p><button type="button">Phát lại</button></div></article>
+      </div>
+    </section>
+    <footer>WebM VP8 · 800 × 450 · 4,5 giây · không âm thanh</footer>
+  </main>
+  <script>
+    document.querySelectorAll('article').forEach((card) => {
+      const video = card.querySelector('video');
+      card.querySelector('button').addEventListener('click', () => {
+        video.currentTime = 0;
+        video.play();
+      });
+    });
+  </script>
+</body>
+</html>

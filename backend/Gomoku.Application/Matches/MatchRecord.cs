@@ -23,4 +23,8 @@ public sealed record GameRecord(Guid Id, int Number, Stone OpeningStone, GameSta
     GameRecordState State, IReadOnlyList<MoveRecord> Moves, string? AiVersion = null);
 
 public sealed record MatchRecord(Guid Id, OwnerIdentity Owner, string RuleVersion, int BoardSize,
-    int XScore, int OScore, Guid CurrentGameId, long Revision, IReadOnlyList<GameRecord> Games);
+    int XScore, int OScore, Guid CurrentGameId, long Revision, IReadOnlyList<GameRecord> Games,
+    Stone HumanStone = Stone.X, int? BoardColumns = null)
+{
+    public int Columns => BoardColumns ?? BoardSize;
+}

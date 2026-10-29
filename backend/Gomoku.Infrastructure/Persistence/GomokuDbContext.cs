@@ -48,13 +48,18 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
                 table.HasCheckConstraint("CK_Match_OneOwner", "(\"UserId\" IS NULL) <> (\"GuestSessionId\" IS NULL)");
                 table.HasCheckConstraint("CK_Match_Nonnegative", "\"XScore\" >= 0 AND \"OScore\" >= 0 AND \"Revision\" >= 0");
                 table.HasCheckConstraint("CK_Match_BoardSize", "\"BoardSize\" > 0");
+                table.HasCheckConstraint("CK_Match_BoardColumns", "\"BoardColumns\" IS NULL OR \"BoardColumns\" > 0");
+                table.HasCheckConstraint("CK_Match_HumanStone", "\"HumanStone\" IN ('X', 'O')");
             });
             match.HasKey(x => x.Id);
             match.Property(x => x.RuleVersion).HasMaxLength(64).IsRequired();
+            match.Property(x => x.HumanStone).HasConversion<string>().HasMaxLength(1).HasDefaultValue(Gomoku.Core.Stone.X);
+            match.Property(x => x.HumanStone).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.UserId).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.GuestSessionId).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.RuleVersion).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.BoardSize).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
+            match.Property(x => x.BoardColumns).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.Property(x => x.CreatedAt).Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             match.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             match.HasOne<GuestSession>().WithMany().HasForeignKey(x => x.GuestSessionId).OnDelete(DeleteBehavior.Restrict);

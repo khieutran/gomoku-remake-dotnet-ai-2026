@@ -1,0 +1,39 @@
+.versus-intro { position: absolute; inset: 0; z-index: 4; overflow: hidden; isolation: isolate; pointer-events: auto; }
+.versus-intro::before { content: ''; position: absolute; inset: 0; z-index: 1; background: radial-gradient(circle at center, #74304d, #171923 70%); }
+.versus-intro-panel { position: absolute; inset: 0; z-index: 2; background: center / cover no-repeat url('/images/versus-board-square.png'); will-change: transform; }
+.versus-intro-panel--human { clip-path: polygon(0 0, 50% 0, 51% 12%, 49% 25%, 52% 39%, 49% 51%, 51% 64%, 48% 77%, 51% 89%, 50% 100%, 0 100%); }
+.versus-intro-panel--bot { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%, 51% 89%, 48% 77%, 51% 64%, 49% 51%, 52% 39%, 49% 25%, 51% 12%); }
+.versus-intro:not(.versus-intro--playing) .versus-intro-panel { visibility: hidden; }
+.versus-intro-seam { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; opacity: 0; filter: drop-shadow(0 0 4px #ffcf68); }
+.versus-intro-seam polyline { fill: none; stroke: #ffd36f; stroke-width: 3; stroke-linecap: square; }
+.versus-intro-seam--mobile { display: none; }
+.versus-intro-flash { position: absolute; inset: 0; z-index: 5; opacity: 0; background: #fff2dd; }
+.versus-intro-title { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.1) rotate(-12deg); opacity: 0; color: #ffd36f; -webkit-text-stroke: clamp(3px, .65vw, 8px) #552b3d; paint-order: stroke fill; font: 1000 clamp(4rem, 14vw, 10rem)/1 system-ui, sans-serif; letter-spacing: -.13em; text-shadow: 7px 8px 0 #251a26; }
+.versus-intro--playing { animation: versus-shake 1.65s both; }
+.versus-intro--playing::before { animation: versus-curtain 1.65s both; }
+.versus-intro--playing .versus-intro-panel--human { animation: versus-human-desktop 1.65s both; }
+.versus-intro--playing .versus-intro-panel--bot { animation: versus-bot-desktop 1.65s both; }
+.versus-intro--playing .versus-intro-seam--desktop { animation: versus-seam 1.65s both; }
+.versus-intro--playing .versus-intro-flash { animation: versus-flash 1.65s both; }
+.versus-intro--playing .versus-intro-title { animation: versus-title 1.65s both; }
+@keyframes versus-human-desktop { 0% { transform: translateX(-110%); } 25% { transform: translateX(-12%); } 33%, 60% { transform: translateX(0); } 69% { transform: translateX(4%); } 100% { transform: translateX(-110%); } }
+@keyframes versus-bot-desktop { 0% { transform: translateX(110%); } 25% { transform: translateX(12%); } 33%, 60% { transform: translateX(0); } 69% { transform: translateX(-4%); } 100% { transform: translateX(110%); } }
+@keyframes versus-curtain { 0%, 60% { opacity: 1; } 89%, 100% { opacity: 0; } }
+@keyframes versus-seam { 0%, 31% { opacity: 0; } 35%, 60% { opacity: .8; } 75%, 100% { opacity: 0; } }
+@keyframes versus-flash { 0%, 31% { opacity: 0; } 33% { opacity: .95; } 38%, 100% { opacity: 0; } }
+@keyframes versus-title { 0%, 33% { opacity: 0; transform: translate(-50%, -50%) scale(.1) rotate(-12deg); } 42% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) rotate(4deg); } 52%, 60% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-4deg); } 76%, 100% { opacity: 0; transform: translate(-50%, 35%) scale(.7) rotate(-4deg); } }
+@keyframes versus-shake { 0%, 31% { transform: translate(0); } 33% { transform: translate(-10px, 5px); } 35% { transform: translate(9px, -4px); } 38% { transform: translate(-5px, 2px); } 42%, 100% { transform: translate(0); } }
+@media (max-width: 700px) {
+  .versus-intro-panel { background-image: url('/images/versus-board-mobile.png'); }
+  .versus-intro-panel--human { clip-path: polygon(0 0, 100% 0, 100% 50%, 88% 51%, 76% 49%, 64% 52%, 52% 49%, 40% 51%, 28% 48%, 16% 51%, 0 50%); }
+  .versus-intro-panel--bot { clip-path: polygon(0 50%, 16% 51%, 28% 48%, 40% 51%, 52% 49%, 64% 52%, 76% 49%, 88% 51%, 100% 50%, 100% 100%, 0 100%); }
+  .versus-intro-seam--desktop { display: none; }
+  .versus-intro-seam--mobile { display: block; }
+  .versus-intro--playing .versus-intro-panel--human { animation-name: versus-human-mobile; }
+  .versus-intro--playing .versus-intro-panel--bot { animation-name: versus-bot-mobile; }
+  .versus-intro--playing .versus-intro-seam--mobile { animation: versus-seam 1.65s both; }
+  .versus-intro-title { font-size: clamp(4rem, 19vw, 7rem); }
+}
+@keyframes versus-human-mobile { 0% { transform: translateY(-110%); } 25% { transform: translateY(-12%); } 33%, 60% { transform: translateY(0); } 69% { transform: translateY(4%); } 100% { transform: translateY(110%); } }
+@keyframes versus-bot-mobile { 0% { transform: translateY(110%); } 25% { transform: translateY(12%); } 33%, 60% { transform: translateY(0); } 69% { transform: translateY(-4%); } 100% { transform: translateY(-110%); } }
+@media (prefers-reduced-motion: reduce) { .versus-intro { display: none; } }

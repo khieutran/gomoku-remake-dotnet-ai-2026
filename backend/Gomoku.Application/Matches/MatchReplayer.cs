@@ -15,12 +15,14 @@ public static class MatchReplayer
         {
             throw new UnsupportedRuleVersionException(stored.RuleVersion);
         }
-        if (stored.BoardSize != 20 || stored.Games.Count == 0)
+        if (!MatchBoardSizes.Supports(stored.BoardSize, stored.Columns) || stored.Games.Count == 0)
         {
             throw new StateIntegrityException("Unsupported board size or missing game.");
         }
 
-        var match = Match.Start(new RuleSet(stored.BoardSize));
+        if (stored.HumanStone is not (Stone.X or Stone.O))
+            throw new StateIntegrityException("Human stone is invalid.");
+        var match = Match.Start(new RuleSet(stored.BoardSize, stored.Columns), stored.Games[0].OpeningStone);
         var commandCount = 0L;
         for (var gameIndex = 0; gameIndex < stored.Games.Count; gameIndex++)
         {
@@ -35,7 +37,7 @@ public static class MatchReplayer
             {
                 var move = game.Moves[moveIndex];
                 var current = match.Snapshot().CurrentGame;
-                var expectedActor = current.NextStone == Stone.X ? PlayerActor.Human : PlayerActor.AI;
+                var expectedActor = current.NextStone == stored.HumanStone ? PlayerActor.Human : PlayerActor.AI;
                 if (move.Step != moveIndex + 1 || move.Stone != current.NextStone || move.Actor != expectedActor ||
                     match.TryPlay(new Position(move.Row, move.Column)) != MoveResult.Played)
                 {

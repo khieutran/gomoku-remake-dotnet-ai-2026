@@ -10,21 +10,30 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
     IAiVersionProvider? aiVersions = null)
 {
     public async Task<FlowResult> CreateMatchAsync(OwnerIdentity owner, string commandId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, Stone humanStone = Stone.X, bool humanFirst = true,
+        int boardSize = 20, int? boardColumns = null)
     {
-        if (!ValidCommand(owner, commandId)) return FlowResult.Error("validation_error");
-        var hash = Hash($"create|{RuleSet.CurrentVersion}|20");
+        var columns = boardColumns ?? boardSize;
+        if (!ValidCommand(owner, commandId) || humanStone is not (Stone.X or Stone.O) ||
+            !MatchBoardSizes.Supports(boardSize, columns))
+            return FlowResult.Error("validation_error");
+        var openingStone = humanFirst ? humanStone : humanStone == Stone.X ? Stone.O : Stone.X;
+        var hash = humanStone == Stone.X && humanFirst
+            ? Hash($"create|{RuleSet.CurrentVersion}|{boardSize}|{columns}")
+            : Hash($"create|{RuleSet.CurrentVersion}|{boardSize}|{columns}|{humanStone}|{openingStone}");
         var previous = await store.FindReceiptAsync(owner, commandId, cancellationToken);
         if (previous is not null) return ReplayReceipt(previous, hash);
 
         var matchId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
-        var core = Match.Start(new RuleSet(20));
-        var game = new GameRecord(gameId, 1, Stone.X, GameStatus.InProgress,
-            GameRecordState.Active, [], aiVersions?.CurrentVersion ?? AiVersions.Current);
-        var record = new MatchRecord(matchId, owner, RuleSet.CurrentVersion, 20,
-            0, 0, gameId, 0, [game]);
-        var receipt = new CommandRecord(owner, commandId, matchId, hash, 201, ToBody(record, core), 0);
+        var core = Match.Start(new RuleSet(boardSize, columns), openingStone);
+        var game = new GameRecord(gameId, 1, openingStone, GameStatus.InProgress,
+            GameRecordState.Active, [], boardSize == 20 && columns == 20
+                ? aiVersions?.CurrentVersion ?? AiVersions.Current : AiVersions.SearchV1);
+        var record = new MatchRecord(matchId, owner, RuleSet.CurrentVersion, boardSize,
+            0, 0, gameId, 0, [game], humanStone, columns);
+        var receipt = new CommandRecord(owner, commandId, matchId, hash,
+            humanFirst ? 201 : 202, ToBody(record, core), 0);
         var outcome = await store.CreateAsync(record, receipt, cancellationToken);
         return await ResolveCommitAsync(outcome, receipt, cancellationToken);
     }
@@ -37,7 +46,8 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
         try
         {
             var core = MatchReplayer.Replay(stored);
-            var pending = core.Snapshot().CurrentGame.NextStone == Stone.O;
+            var nextStone = core.Snapshot().CurrentGame.NextStone;
+            var pending = nextStone is Stone.X or Stone.O && nextStone != stored.HumanStone;
             var progress = pending && jobs is not null
                 ? await jobs.ReadProgressAsync(stored.CurrentGameId, stored.Revision, cancellationToken)
                 : null;
@@ -76,8 +86,8 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
 
         var before = core.Snapshot().CurrentGame;
         if (before.Status != GameStatus.InProgress) return FlowResult.Error("game_finished");
-        if (before.NextStone == Stone.X && actor != PlayerActor.Human ||
-            before.NextStone == Stone.O && actor != PlayerActor.AI)
+        if (before.NextStone == stored.HumanStone && actor != PlayerActor.Human ||
+            before.NextStone != stored.HumanStone && actor != PlayerActor.AI)
         {
             return FlowResult.Error("wrong_turn");
         }
@@ -104,7 +114,7 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
             XScore = after.XScore, OScore = after.OScore, Revision = stored.Revision + 1,
             Games = [..stored.Games.Take(stored.Games.Count - 1), game]
         };
-        var httpStatus = !completed && after.CurrentGame.NextStone == Stone.O ? 202 : 200;
+        var httpStatus = !completed && after.CurrentGame.NextStone != stored.HumanStone ? 202 : 200;
         var receipt = new CommandRecord(owner, commandId, matchId, hash, httpStatus,
             ToBody(updated, core), updated.Revision);
         var outcome = await store.CommitAsync(updated, expectedRevision, added, null,
@@ -133,13 +143,14 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
         var gameId = Guid.NewGuid();
         var game = new GameRecord(gameId, stored.Games.Count + 1,
             core.Snapshot().OpeningStone, GameStatus.InProgress, GameRecordState.Active,
-            [], aiVersions?.CurrentVersion ?? AiVersions.Current);
+            [], stored.BoardSize == 20 && stored.Columns == 20
+                ? aiVersions?.CurrentVersion ?? AiVersions.Current : AiVersions.SearchV1);
         var updated = stored with
         {
             CurrentGameId = gameId, Revision = stored.Revision + 1,
             Games = [..stored.Games, game]
         };
-        var httpStatus = game.OpeningStone == Stone.O ? 202 : 200;
+        var httpStatus = game.OpeningStone != stored.HumanStone ? 202 : 200;
         var receipt = new CommandRecord(owner, commandId, matchId, hash, httpStatus,
             ToBody(updated, core), updated.Revision);
         var outcome = await store.CommitAsync(updated, expectedRevision, null, game,
@@ -181,6 +192,8 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
             matchId = record.Id,
             ruleVersion = record.RuleVersion,
             boardSize = record.BoardSize,
+            boardColumns = record.Columns,
+            humanStone = record.HumanStone.ToString(),
             xScore = snapshot.XScore,
             oScore = snapshot.OScore,
             revision = record.Revision,
@@ -193,7 +206,7 @@ public sealed class GameFlowService(IGameFlowStore store, IAiTurnJobStore? jobs 
                 status = snapshot.CurrentGame.Status.ToString(),
                 nextStone = snapshot.CurrentGame.NextStone?.ToString(),
                 turnStatus = snapshot.CurrentGame.Status != GameStatus.InProgress ? "finished"
-                    : snapshot.CurrentGame.NextStone != Stone.O ? "human"
+                    : snapshot.CurrentGame.NextStone == record.HumanStone ? "human"
                     : progress is { Attempts: >= 3, LastErrorCode: not null }
                         ? "ai_retrying" : "ai_pending",
                 aiErrorCode = progress is { Attempts: >= 3 } ? progress.LastErrorCode : null,

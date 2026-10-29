@@ -101,14 +101,14 @@ internal sealed class AlphaBetaSearch(SearchBoard board, RuleSet rules, Stone si
                     PatternEvaluator.Score(board, turn) - PatternEvaluator.Score(board, opponent);
                 // Policy only adjusts root ordering. It cannot replace Core tactical checks.
                 if (usePolicy && policyRanks is not null)
-                    score += policyRanks[move.Row * board.Size + move.Column] * 20;
+                    score += policyRanks[move.Row * board.Columns + move.Column] * 20;
                 ranked.Add((move, score));
             }
             finally { board.Undo(move); }
         }
         return ranked.OrderByDescending(item => item.Score)
             .ThenBy(item => Math.Abs(item.Move.Row - board.Size / 2) +
-                Math.Abs(item.Move.Column - board.Size / 2))
+                Math.Abs(item.Move.Column - board.Columns / 2))
             .ThenBy(item => TieBreak(item.Move))
             .Take(limit).Select(item => item.Move).ToArray();
     }

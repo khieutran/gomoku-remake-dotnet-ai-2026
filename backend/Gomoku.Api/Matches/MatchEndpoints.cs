@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Gomoku.Api.Common;
 using Gomoku.Api.Identity;
 using Gomoku.Application.Matches;
+using Gomoku.Core;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Gomoku.Api.Matches;
@@ -46,14 +47,16 @@ public static class MatchEndpoints
             if (scope is not null && scope is not ("account" or "guest"))
                 return ValidationError(context, "Scope must be account or guest.");
 
-            var commandId = await ReadCommandIdAsync(context.Request, context.RequestAborted);
-            if (commandId is null)
-                return ValidationError(context, "A valid commandId is required.");
+            var command = await ReadCreateCommandAsync(context.Request, context.RequestAborted);
+            if (command is null)
+                return ValidationError(context, "A valid create match command is required.");
 
             var owner = await owners.ResolveAsync(context, scope, context.RequestAborted);
             if (owner is null) return AuthenticationError(context);
 
-            var result = await gameFlow.CreateMatchAsync(owner.Value, commandId, context.RequestAborted);
+            var result = await gameFlow.CreateMatchAsync(owner.Value, command.Value.CommandId,
+                context.RequestAborted, command.Value.HumanStone, command.Value.HumanFirst,
+                command.Value.BoardSize, command.Value.BoardColumns);
             return ToHttpResult(context, result, loggerFactory);
         });
 
@@ -132,19 +135,44 @@ public static class MatchEndpoints
         }
     }
 
-    private static async Task<string?> ReadCommandIdAsync(HttpRequest request, CancellationToken cancellationToken)
+    private static async Task<(string CommandId, Stone HumanStone, bool HumanFirst, int BoardSize, int BoardColumns)?> ReadCreateCommandAsync(
+        HttpRequest request, CancellationToken cancellationToken)
     {
         try
         {
             using var document = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken);
-            if (document.RootElement.ValueKind != JsonValueKind.Object ||
-                document.RootElement.EnumerateObject().Count() != 1 ||
-                !document.RootElement.TryGetProperty("commandId", out var element) ||
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                root.EnumerateObject().Count() is < 1 or > 5 ||
+                !root.TryGetProperty("commandId", out var element) ||
                 element.ValueKind != JsonValueKind.String)
                 return null;
 
             var commandId = element.GetString();
-            return ValidPublicCommandId(commandId) ? commandId : null;
+            if (!ValidPublicCommandId(commandId)) return null;
+            var count = root.EnumerateObject().Count();
+            var hasSize = root.TryGetProperty("boardSize", out var size);
+            var hasColumns = root.TryGetProperty("boardColumns", out var columnValue);
+            var boardSize = hasSize && size.ValueKind == JsonValueKind.Number && size.TryGetInt32(out var parsed)
+                ? parsed : 20;
+            var boardColumns = hasColumns && columnValue.ValueKind == JsonValueKind.Number &&
+                columnValue.TryGetInt32(out var parsedColumns) ? parsedColumns : boardSize;
+            if (hasSize && (size.ValueKind != JsonValueKind.Number || !size.TryGetInt32(out _)) ||
+                hasColumns && (columnValue.ValueKind != JsonValueKind.Number || !columnValue.TryGetInt32(out _)) ||
+                !MatchBoardSizes.Supports(boardSize, boardColumns)) return null;
+            var dimensionFields = (hasSize ? 1 : 0) + (hasColumns ? 1 : 0);
+            if (count == 1 + dimensionFields) return (commandId!, Stone.X, true, boardSize, boardColumns);
+            if (count != 3 + dimensionFields ||
+                !root.TryGetProperty("humanStone", out var stone) || stone.ValueKind != JsonValueKind.String ||
+                !root.TryGetProperty("humanFirst", out var first) ||
+                first.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) return null;
+            var humanStone = stone.GetString() switch
+            {
+                "X" => Stone.X,
+                "O" => Stone.O,
+                _ => Stone.Empty
+            };
+            return humanStone == Stone.Empty ? null : (commandId!, humanStone, first.GetBoolean(), boardSize, boardColumns);
         }
         catch (JsonException)
         {

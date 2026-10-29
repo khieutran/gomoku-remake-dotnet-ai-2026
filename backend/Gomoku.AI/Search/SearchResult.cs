@@ -7,6 +7,8 @@ public enum SearchDecisionReason
     NoMove,
     ImmediateWin,
     ImmediateBlock,
+    ThreatBlock,
+    ThreatAttack,
     Search,
     Fallback
 }

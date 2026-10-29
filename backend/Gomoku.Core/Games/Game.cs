@@ -17,7 +17,7 @@ public sealed class Game
         }
 
         _rules = rules;
-        _board = new Board(rules.BoardSize);
+        _board = new Board(rules.BoardSize, rules.BoardColumns);
         _nextStone = openingStone;
     }
 

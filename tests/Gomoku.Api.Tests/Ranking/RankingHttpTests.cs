@@ -4,11 +4,13 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Gomoku.Application.Identity;
 using Gomoku.Application.Matches;
+using Gomoku.Api.Matches;
 using Gomoku.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using StackExchange.Redis;
 using Xunit;
@@ -19,9 +21,13 @@ public sealed class RankingHttpTests
 {
     private static WebApplicationFactory<Program> OpenFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.UseSetting("ConnectionStrings:Gomoku",
                 Environment.GetEnvironmentVariable("GOMOKU_TEST_POSTGRES")
-                ?? throw new InvalidOperationException("Set GOMOKU_TEST_POSTGRES.")));
+                ?? throw new InvalidOperationException("Set GOMOKU_TEST_POSTGRES."));
+            // These tests play the AI turns explicitly to award deterministic scores.
+            builder.UseSetting("AiWorker:Enabled", "false");
+        });
 
     [Fact]
     public async Task CompletedAccountWinAppearsOnLeaderboardButGuestWinDoesNot()
@@ -80,6 +86,7 @@ public sealed class RankingHttpTests
         if (string.IsNullOrWhiteSpace(redis)) return;
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.UseSetting("AiWorker:Enabled", "false");
             builder.UseSetting("ConnectionStrings:Gomoku",
                 Environment.GetEnvironmentVariable("GOMOKU_TEST_POSTGRES")
                 ?? throw new InvalidOperationException("Set GOMOKU_TEST_POSTGRES."));
@@ -105,15 +112,15 @@ public sealed class RankingHttpTests
         const string board = "gomoku:development:ranking:v1:alltime";
         const string ready = "gomoku:development:ranking:v1:ready";
         Assert.True(await WaitUntilAsync(async () =>
-            await redisDb.KeyExistsAsync(ready) &&
-            await redisDb.SortedSetScoreAsync(board, accountId.ToString("N")) == 3));
-
-        using (var scope = factory.Services.CreateScope())
         {
+            if (!await redisDb.KeyExistsAsync(ready) ||
+                await redisDb.SortedSetScoreAsync(board, accountId.ToString("N")) != 3)
+                return false;
+            using var scope = factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<GomokuDbContext>();
-            Assert.Equal(1, await db.RankingOutbox.CountAsync(x =>
-                x.UserId == accountId && x.PublishedAt != null));
-        }
+            return await db.RankingOutbox.CountAsync(x =>
+                x.UserId == accountId && x.PublishedAt != null) == 1;
+        }));
 
         var postgres = Environment.GetEnvironmentVariable("GOMOKU_TEST_POSTGRES")!;
         await using var blocker = new NpgsqlConnection(postgres);
@@ -141,6 +148,7 @@ public sealed class RankingHttpTests
     {
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.UseSetting("AiWorker:Enabled", "false");
             builder.UseSetting("ConnectionStrings:Gomoku",
                 Environment.GetEnvironmentVariable("GOMOKU_TEST_POSTGRES")
                 ?? throw new InvalidOperationException("Set GOMOKU_TEST_POSTGRES."));
@@ -195,6 +203,7 @@ public sealed class RankingHttpTests
     private static async Task FinishXAsync(WebApplicationFactory<Program> factory,
         OwnerIdentity owner, Guid matchId)
     {
+        Assert.DoesNotContain(factory.Services.GetServices<IHostedService>(), service => service is AiTurnWorker);
         using var scope = factory.Services.CreateScope();
         var flow = scope.ServiceProvider.GetRequiredService<GameFlowService>();
         long revision = 0;

@@ -10,7 +10,7 @@ internal static class LegalFallback
         if (candidates.Count > 0)
             return candidates[new Random(seed).Next(candidates.Count)];
 
-        var center = new Position(board.Size / 2, board.Size / 2);
+        var center = new Position(board.Size / 2, board.Columns / 2);
         return board.Get(center) == Stone.Empty ? center : null;
     }
 }

@@ -1,0 +1,1 @@
+{"name":"gomoku-monorepo","private":true,"workspaces":["frontend"],"engines":{"node":">=22.12.0"}}

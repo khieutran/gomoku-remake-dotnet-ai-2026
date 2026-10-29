@@ -9,14 +9,17 @@ public sealed class Match
     private int _xScore;
     private int _oScore;
 
-    private Match(RuleSet rules)
+    private Match(RuleSet rules, Stone openingStone)
     {
         ArgumentNullException.ThrowIfNull(rules);
+        if (openingStone is not (Stone.X or Stone.O))
+            throw new ArgumentOutOfRangeException(nameof(openingStone));
         _rules = rules;
+        _openingStone = openingStone;
         _game = Game.Start(rules, _openingStone);
     }
 
-    public static Match Start(RuleSet rules) => new(rules);
+    public static Match Start(RuleSet rules, Stone openingStone = Stone.X) => new(rules, openingStone);
 
     public MoveResult TryPlay(Position position)
     {

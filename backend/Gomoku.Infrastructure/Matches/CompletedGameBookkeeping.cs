@@ -24,7 +24,7 @@ internal static class CompletedGameBookkeeping
         if (match.Owner.Scope != OwnerScope.Account) return;
 
         var game = match.Games[^1];
-        var award = RankingPoints.For(game.RuleStatus, Stone.X);
+        var award = RankingPoints.For(game.RuleStatus, match.HumanStone);
         var ranked = await db.Users.Where(x => x.Id == match.Owner.Id)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(x => x.RankingPoints, x => x.RankingPoints + award)
