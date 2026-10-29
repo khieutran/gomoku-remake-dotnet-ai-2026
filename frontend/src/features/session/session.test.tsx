@@ -102,7 +102,7 @@ it('does not create a guest on entry; a second explicit choice reuses the server
   await user.click(screen.getByRole('button', { name: 'Chơi khách' }));
   expect(await screen.findByTestId('session')).toHaveTextContent(`guest:${guestId}`);
   expect(screen.getByTestId('path')).toHaveTextContent('/');
-  await user.click(screen.getByRole('link', { name: 'Gomoku trang chủ' }));
+  await user.click(screen.getByRole('link', { name: 'GOMOKU - KioTranDev, trang chủ' }));
   await user.click(screen.getByRole('button', { name: 'Quay lại' }));
   await user.click(screen.getByRole('button', { name: 'Chơi khách' }));
   await waitFor(() => expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith('/guest-sessions'))).toHaveLength(2));
