@@ -1,13 +1,40 @@
-.leaderboard-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr); gap: 24px; align-items: start; }
-.leaderboard-table-scroll { overflow-x: auto; }
-.leaderboard-layout table { width: 100%; border-collapse: collapse; text-align: left; }
-.leaderboard-layout th, .leaderboard-layout td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
-.leaderboard-layout td:last-child, .leaderboard-layout th:last-child { text-align: right; font-weight: 700; }
-.leaderboard-id { overflow-wrap: anywhere; font-size: .875rem; }
+.leaderboard-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(240px, .7fr); gap: 24px; align-items: start; width: min(100%, 1180px); margin-inline: auto; }
+.leaderboard-layout .window-body { padding: clamp(18px, 2.5vw, 30px); }
+.leaderboard-layout h1 { margin-bottom: 8px; }
+.leaderboard-layout p { color: #654a50; }
+.leaderboard-table-scroll { width: 100%; overflow-x: auto; }
+.leaderboard-layout table { width: 100%; border-collapse: separate; border-spacing: 0 8px; text-align: left; }
+.leaderboard-layout th { padding: 4px 14px; font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; }
+.leaderboard-layout th:last-child, .leaderboard-layout td:last-child { text-align: right; }
+.leaderboard-row td { height: 62px; padding: 9px 14px; border-block: 2px solid var(--line); background: #fff6e8; }
+.leaderboard-row td:first-child { width: 84px; border-left: 2px solid var(--line); }
+.leaderboard-row td:last-child { border-right: 2px solid var(--line); }
+.leaderboard-row--first td { height: 86px; background: #ffe39b; }
+.leaderboard-row--second td { height: 76px; background: #d8eced; }
+.leaderboard-row--third td { height: 70px; background: #efd8bb; }
+.leaderboard-rank { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 2px solid var(--line); background: #fff6e8; font: 800 1rem/1 var(--font-display); }
+.leaderboard-row--first .leaderboard-rank { width: 50px; height: 50px; background: #ffd36f; font-size: 1.45rem; }
+.leaderboard-row--second .leaderboard-rank, .leaderboard-row--third .leaderboard-rank { width: 44px; height: 44px; font-size: 1.2rem; }
+.leaderboard-row--second .leaderboard-rank { background: #bce0e1; }
+.leaderboard-row--third .leaderboard-rank { background: #e5b78d; }
+.leaderboard-player { display: block; font-weight: 800; overflow-wrap: anywhere; }
+.leaderboard-row--first .leaderboard-player { font: 800 1.2rem/1.3 var(--font-display); }
+.leaderboard-rank-name { display: block; margin-top: 3px; font-size: .8rem; font-weight: 700; }
+.leaderboard-points { font-weight: 900; font-size: 1.1rem; white-space: nowrap; }
+.leaderboard-row--first .leaderboard-points { font-size: 1.4rem; }
+.leaderboard-points small { display: block; font-size: .72rem; font-weight: 650; }
 .leaderboard-personal h2, .match-score-panel h2 { margin: 0 0 12px; font: 700 1.1rem/1.3 var(--font-display); }
 .leaderboard-stats, .match-score-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
 .leaderboard-stats div, .match-score-values div { padding: 12px; border: 2px solid var(--line); background: #fff6e8; }
 .leaderboard-stats dt, .match-score-values dt { font-size: .875rem; font-weight: 700; }
 .leaderboard-stats dd, .match-score-values dd { margin: 0; font: 700 1.6rem/1.3 var(--font-display); }
 .match-score-panel { padding: 16px; border: 2px solid var(--line); background: var(--paper); }
-@media (max-width: 700px) { .leaderboard-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  .leaderboard-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .leaderboard-layout th, .leaderboard-row td { padding-inline: 8px; }
+  .leaderboard-row td:first-child { width: 54px; }
+  .leaderboard-rank { width: 32px; height: 32px; }
+  .leaderboard-row--first .leaderboard-rank { width: 42px; height: 42px; }
+  .leaderboard-row--second .leaderboard-rank, .leaderboard-row--third .leaderboard-rank { width: 38px; height: 38px; }
+  .leaderboard-row--first .leaderboard-player { font-size: 1rem; }
+}

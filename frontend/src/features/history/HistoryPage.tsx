@@ -1,20 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import type { OwnerIdentity, OwnerScope } from '../../shared/api/contracts';
+import type { HistorySummaryDto, OwnerIdentity, OwnerScope } from '../../shared/api/contracts';
 import { ApiError } from '../../shared/api/errors';
 import { queryKeys } from '../../shared/api/queryKeys';
 import { OwnerGate } from '../session/OwnerGate';
 import { useSession } from '../session/sessionContext';
 import { ActiveMatches } from './ActiveMatches';
 import { listActive, listHistory } from './historyApi';
+import './history.css';
 
 const limit = 20;
 const unauthorized = (error: unknown) => error instanceof ApiError && error.status === 401;
+const dateTime = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
+
+function resultFor(game: HistorySummaryDto) {
+  if (game.status === 'Draw') return { text: 'Hòa', tone: 'draw' };
+  if (!game.humanStone) return { text: game.status === 'XWon' ? 'X thắng' : 'O thắng', tone: 'unknown' };
+  return game.status === `${game.humanStone}Won`
+    ? { text: 'Bạn thắng', tone: 'win' }
+    : { text: 'Bạn thua', tone: 'loss' };
+}
 
 function HistoryContent({ scope, identity }: { scope: OwnerScope; identity: OwnerIdentity }) {
   const queryClient = useQueryClient();
-  const { requireAccount } = useSession();
+  const { requireAccount, session } = useSession();
   const [locked, setLocked] = useState(false);
   const active = useInfiniteQuery({
     queryKey: queryKeys.active(identity, null, limit), initialPageParam: null as string | null,
@@ -48,13 +58,27 @@ function HistoryContent({ scope, identity }: { scope: OwnerScope; identity: Owne
   const activeItems = active.data.pages.flatMap(page => page.items);
   const historyItems = history.data.pages.flatMap(page => page.items);
   return <>
+    <section className="history-player" aria-label="Người chơi">
+      <span className="history-player-mark" aria-hidden="true">X O</span>
+      <div><span className="history-player-label">Người chơi</span>
+        <strong>{scope === 'account' && session.scope === 'account' ? session.email ?? 'Tài khoản của bạn' : 'Khách'}</strong>
+        <small>{scope === 'account' ? 'Lịch sử gắn với tài khoản của bạn' : 'Lịch sử của phiên khách hiện tại'}</small>
+      </div>
+    </section>
     <ActiveMatches scope={scope} items={activeItems} hasMore={Boolean(active.hasNextPage)} loadingMore={active.isFetchingNextPage} onMore={() => void active.fetchNextPage()} />
     <section aria-label="Ván đã xong" className="history-section">
       <h2>Ván đã xong</h2>
-      {historyItems.length ? <ol>{historyItems.map((game, index) => <li key={game.gameId}>
-        <Link to={`/history/${game.gameId}?scope=${scope}`}>Ván {index + 1}</Link>
-        <span> · {game.moveCount} nước · {game.status}</span>
-      </li>)}</ol> : <p>Chưa có ván đã xong.</p>}
+      {historyItems.length ? <div className="history-table-wrap"><table className="history-table" aria-label="Kết quả các ván đã xong">
+        <thead><tr><th scope="col">Ván đấu</th><th scope="col">Kết quả</th><th scope="col" className="history-table-moves">Số nước</th></tr></thead>
+        <tbody>{historyItems.map((game, index) => {
+          const result = resultFor(game);
+          return <tr key={game.gameId}>
+            <td><Link to={`/history/${game.gameId}?scope=${scope}`}>Ván {index + 1}</Link><small>{dateTime.format(new Date(game.finishedAt))} · {game.boardSize}×{game.boardColumns ?? game.boardSize} · {game.moveCount} nước</small></td>
+            <td><span className={`history-result history-result--${result.tone}`}>{result.text}</span></td>
+            <td className="history-table-moves">{game.moveCount}</td>
+          </tr>;
+        })}</tbody>
+      </table></div> : <p>Chưa có ván đã xong.</p>}
       {history.hasNextPage && <button type="button" className="button" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Đang tải…' : 'Xem thêm'}</button>}
     </section>
   </>;
@@ -62,7 +86,7 @@ function HistoryContent({ scope, identity }: { scope: OwnerScope; identity: Owne
 
 export function HistoryPage({ scope }: { scope: OwnerScope }) {
   const { session } = useSession();
-  return <div className="page-shell"><h1 tabIndex={-1}>Lịch sử ván đấu</h1>
+  return <div className="page-shell history-page"><h1 tabIndex={-1}>Lịch sử ván đấu</h1>
     <OwnerGate scope={scope}>{session.scope === scope && <HistoryContent key={`${scope}:${session.ownerId}`} scope={scope} identity={{ scope, ownerId: session.ownerId }} />}</OwnerGate>
   </div>;
 }

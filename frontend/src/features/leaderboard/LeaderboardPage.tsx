@@ -19,6 +19,7 @@ export function LeaderboardPage() {
     retry: false,
   });
   const needsLogin = mine.error instanceof ApiError && mine.error.status === 401;
+  const rankName = (rank: number) => rank === 1 ? 'Dẫn đầu' : rank === 2 ? 'Á quân' : rank === 3 ? 'Hạng ba' : '';
 
   useEffect(() => {
     if (needsLogin && session.scope === 'account') void requireAccount();
@@ -27,13 +28,17 @@ export function LeaderboardPage() {
   return <div className="leaderboard-layout">
     <Window title="Bảng xếp hạng">
       <h1 tabIndex={-1}>Bảng xếp hạng</h1>
-      <p>Điểm tài khoản do máy chủ ghi sau mỗi ván đã kết thúc.</p>
+      <p>Thắng +3 điểm · Hòa +1 điểm · Thua 0 điểm</p>
       {top.isPending && <p role="status">Đang tải bảng xếp hạng…</p>}
       {top.isError && <p role="alert">Chưa tải được bảng xếp hạng. Hãy thử lại sau.</p>}
       {top.data && (top.data.items.length === 0 ? <p>Chưa có tài khoản nào trên bảng xếp hạng.</p> :
         <div className="leaderboard-table-scroll"><table aria-label="Bảng xếp hạng">
           <thead><tr><th scope="col">Hạng</th><th scope="col">Tài khoản</th><th scope="col">Điểm</th></tr></thead>
-          <tbody>{top.data.items.map(entry => <tr key={entry.accountId}><td>{entry.rank}</td><td className="leaderboard-id">{entry.accountId}</td><td>{entry.points}</td></tr>)}</tbody>
+          <tbody>{top.data.items.map(entry => <tr key={entry.accountId} className={`leaderboard-row leaderboard-row--${entry.rank <= 3 ? ['first', 'second', 'third'][entry.rank - 1] : 'standard'}`}>
+            <td><span className="leaderboard-rank" aria-label={`Hạng ${entry.rank}`}>{entry.rank}</span></td>
+            <td><span className="leaderboard-player">{isAccount && entry.accountId === session.ownerId ? 'Bạn' : `Người chơi ${entry.accountId.slice(0, 8)}`}</span><span className="sr-only">{entry.accountId}</span>{entry.rank <= 3 && <small className="leaderboard-rank-name">{rankName(entry.rank)}</small>}</td>
+            <td className="leaderboard-points">{entry.points}<small>điểm</small></td>
+          </tr>)}</tbody>
         </table></div>)}
     </Window>
     <Window title="Vị trí của bạn" className="leaderboard-personal">

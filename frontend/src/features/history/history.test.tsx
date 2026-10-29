@@ -114,6 +114,7 @@ it('does not reveal a cached guest replay board while access is being revalidate
   query.setQueryData(['owner', 'guest', guestId, 'history-game', game1], { ...summary(game1, match1), moves: [{ step: 1, row: 0, column: 0, stone: 'X', actor: 'Human', playedAt: date }] });
   renderFeature(<ReplayPage scope="guest" gameId={game1} />, { scope: 'guest', ownerId: guestId }, query);
   expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+  expect(document.querySelector('.game-workspace--match')).toBeInTheDocument();
   expect(screen.queryByText('Bước 0 / 1')).not.toBeInTheDocument();
   rejectGame(unauthorized());
   expect(await screen.findByRole('alert')).toHaveTextContent('Không thể truy cập phiên khách cũ');
@@ -135,6 +136,9 @@ it('replays sorted steps without mutating the received game or sending moves', a
   vi.stubGlobal('fetch', vi.fn(async (url: string) => { requests.push(url); return json({ ...summary(game1, match1), moves }); }));
   renderFeature(<ReplayPage scope="account" gameId={game1} />, { scope: 'account', ownerId });
   expect(await screen.findByText('Bước 0 / 2')).toBeInTheDocument();
+  expect(document.querySelector('.game-workspace--match')).toBeInTheDocument();
+  expect(document.querySelector('.game-workspace-main .gomoku-board')).toBeInTheDocument();
+  expect(document.querySelectorAll('.game-workspace-side .window')).toHaveLength(2);
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: 'Bước sau' }));
   expect(screen.getByText('Bước 1 / 2')).toBeInTheDocument();
