@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -161,5 +163,47 @@ public sealed class WebHostingTests
         var error = await post.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("csrf_invalid", error.GetProperty("code").GetString());
         Assert.Contains("no-store", post.Headers.GetValues("Cache-Control").Single());
+    }
+
+    [Fact]
+    public async Task ConfiguredCertificateEncryptsPersistedDataProtectionKeys()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gomoku-protection-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var keys = Path.Combine(root, "keys");
+        var certificatePath = Path.Combine(root, "keys.pfx");
+        var passwordPath = Path.Combine(root, "certificate-password");
+        const string password = "test-only-certificate-password";
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest("CN=gomoku-test", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+        File.WriteAllBytes(certificatePath, certificate.Export(X509ContentType.Pfx, password));
+        File.WriteAllText(passwordPath, password + "\n");
+        try
+        {
+            using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Production");
+                builder.UseSetting("ConnectionStrings:Gomoku", "Host=127.0.0.1;Port=1;Database=unused;Username=unused");
+                builder.UseSetting("GOMOKU_DP_KEYS_DIR", keys);
+                builder.UseSetting("GOMOKU_DP_CERT_FILE", certificatePath);
+                builder.UseSetting("GOMOKU_DP_CERT_PASSWORD_FILE", passwordPath);
+            });
+            using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost")
+            });
+
+            using var response = await client.GetAsync("/api/v1/auth/csrf");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var xml = string.Join("\n", Directory.GetFiles(keys, "*.xml").Select(File.ReadAllText));
+            Assert.Contains("encryptedSecret", xml);
+            Assert.DoesNotContain("<masterKey", xml);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 }

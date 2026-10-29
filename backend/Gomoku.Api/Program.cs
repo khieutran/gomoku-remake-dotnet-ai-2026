@@ -5,9 +5,14 @@ using Gomoku.Api.Health;
 using Gomoku.Api.Matches;
 using Gomoku.Api.Ranking;
 using Gomoku.Api.Redis;
+using Gomoku.Infrastructure.Persistence;
 using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
+var postgresConnectionString = builder.Configuration.GetConnectionString("Gomoku");
+if (!string.IsNullOrWhiteSpace(postgresConnectionString))
+    builder.Configuration["ConnectionStrings:Gomoku"] = PostgresConnectionString.WithPasswordFile(
+        postgresConnectionString, builder.Configuration["GOMOKU_POSTGRES_PASSWORD_FILE"]);
 
 builder.Services.AddHealthChecks()
     .AddCheck<PostgreSqlReadyHealthCheck>("postgresql", tags: ["ready"],

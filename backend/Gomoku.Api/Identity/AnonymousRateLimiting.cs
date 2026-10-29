@@ -39,7 +39,7 @@ public static class AnonymousRateLimiting
 
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             options.KnownProxies.Clear();
             options.KnownIPNetworks.Clear();
             foreach (var address in proxyAddresses)

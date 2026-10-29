@@ -4,6 +4,7 @@ using Gomoku.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Gomoku.Api.Identity;
 
@@ -60,9 +61,21 @@ public static class IdentitySetup
             keyPath = Path.Combine(builder.Environment.ContentRootPath, ".keys");
         }
         Directory.CreateDirectory(keyPath);
-        builder.Services.AddDataProtection()
+        var dataProtection = builder.Services.AddDataProtection()
             .SetApplicationName("Gomoku.Api")
             .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+        var certificatePath = builder.Configuration["GOMOKU_DP_CERT_FILE"];
+        if (!string.IsNullOrWhiteSpace(certificatePath))
+        {
+            var passwordPath = builder.Configuration["GOMOKU_DP_CERT_PASSWORD_FILE"];
+            if (string.IsNullOrWhiteSpace(passwordPath))
+                throw new InvalidOperationException("GOMOKU_DP_CERT_PASSWORD_FILE is required with GOMOKU_DP_CERT_FILE.");
+            var password = File.ReadAllText(passwordPath).TrimEnd('\r', '\n');
+            if (string.IsNullOrWhiteSpace(password))
+                throw new InvalidOperationException("Data Protection certificate password secret is empty.");
+            dataProtection.ProtectKeysWithCertificate(
+                X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password));
+        }
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddScoped<IGuestSessionService, GuestSessionService>();
