@@ -16,7 +16,7 @@ const oMove = { ...xMove, revision: 2, currentGame: { ...xMove.currentGame, next
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const error = (code: string, status = 409) => json({ code, message: code }, status);
 type FetchHandler = (path: string, init: RequestInit) => Response | Promise<Response>;
-function setup(handler: FetchHandler, id?: string, identity: OwnerIdentity = owner) {
+function setup(handler: FetchHandler, id?: string, identity: OwnerIdentity = owner, route = '/') {
   const requests: { path: string; init: RequestInit }[] = [];
   vi.stubGlobal('fetch', vi.fn(async (path: string, init: RequestInit) => {
     requests.push({ path, init });
@@ -24,11 +24,18 @@ function setup(handler: FetchHandler, id?: string, identity: OwnerIdentity = own
     return handler(path, init);
   }));
   const query = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={query}><MemoryRouter><MatchPage scope={identity.scope} identity={identity} matchId={id} /></MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={query}><MemoryRouter initialEntries={[route]}><MatchPage scope={identity.scope} identity={identity} matchId={id} /></MemoryRouter></QueryClientProvider>);
   return requests;
 }
-beforeEach(() => { Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, writable: true, value: class { observe() {} disconnect() {} } }); });
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+beforeEach(() => {
+  Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, writable: true, value: class { observe() {} disconnect() {} } });
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+});
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+async function skipCutscene() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Bỏ qua hoạt cảnh' }));
+}
 
 it('discovers an active match for this owner before creating a new one', async () => {
   const requests = setup((path) => path.startsWith('/api/v1/matches/active')
@@ -38,7 +45,64 @@ it('discovers an active match for this owner before creating a new one', async (
   expect(requests.some(({ path }) => path === '/api/v1/matches/active?scope=guest&limit=20')).toBe(true);
   expect(requests.some(({ init }) => init.method === 'POST')).toBe(false);
   expect(screen.getByRole('region', { name: 'Điểm trận' })).toHaveTextContent('Bạn X3Bot O2');
-  expect(screen.queryByRole('button', { name: 'Ván tiếp theo' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Chơi tiếp' })).not.toBeInTheDocument();
+});
+
+it('sends selected O and bot-first setup when no saved match exists', async () => {
+  const oStart = { ...base, humanStone: 'O', currentGame: { ...base.currentGame,
+    openingStone: 'X', nextStone: 'X', turnStatus: 'ai_pending' } };
+  const requests = setup(path => path.includes('/active?')
+    ? json({ items: [], nextCursor: null })
+    : path === '/api/v1/matches?scope=guest' ? json(oStart, 202) : error('unexpected', 500),
+  undefined, owner, '/play?scope=guest&stone=O&first=false');
+  await screen.findByText('Bot đang suy nghĩ…');
+  const create = requests.find(({ path }) => path === '/api/v1/matches?scope=guest');
+  expect(JSON.parse(String(create?.init.body))).toMatchObject({ humanStone: 'O', humanFirst: false });
+  expect(screen.getByRole('region', { name: 'Điểm trận' })).toHaveTextContent('Bạn O0Bot X0');
+});
+
+it('creates the selected 40 by 40 board', async () => {
+  const requests = setup(path => path.includes('/active?')
+    ? json({ items: [], nextCursor: null })
+    : path === '/api/v1/matches?scope=guest' ? json({ ...base, boardSize: 40 }, 201) : error('unexpected', 500),
+  undefined, owner, '/play?scope=guest&stone=X&first=true&boardSize=40');
+  await screen.findByText('Ván 1');
+  const create = requests.find(({ path }) => path === '/api/v1/matches?scope=guest');
+  expect(JSON.parse(String(create?.init.body))).toMatchObject({ boardSize: 40 });
+  expect(screen.getByRole('grid', { name: 'Bàn cờ 40 nhân 40' })).toBeInTheDocument();
+});
+
+it('starts a selected board instead of resuming an older active match', async () => {
+  const requests = setup(path => path.includes('/active?')
+    ? json({ items: [{ matchId, gameId, revision: 0, updatedAt: '2026-10-27T00:00:00Z' }], nextCursor: null })
+    : path === '/api/v1/matches?scope=guest' ? json({ ...base, boardSize: 30 }, 201)
+      : path.includes(`/${matchId}`) ? json(base) : error('unexpected', 500),
+  undefined, owner, '/play?scope=guest&stone=X&first=true&boardSize=30');
+  await screen.findByText('Ván 1');
+  expect(screen.getByRole('grid', { name: 'Bàn cờ 30 nhân 30' })).toBeInTheDocument();
+  expect(requests.some(({ path }) => path === '/api/v1/matches?scope=guest')).toBe(true);
+});
+
+it('keeps the selected board frame visible while a new match is loading', async () => {
+  const pending = new Promise<Response>(() => {});
+  setup(path => path === '/api/v1/matches?scope=guest' ? pending : error('unexpected', 500),
+    undefined, owner, '/play?scope=guest&stone=O&first=false&boardSize=30');
+  expect(screen.getByRole('grid', { name: 'Bàn cờ 30 nhân 30' })).toBeInTheDocument();
+  expect(screen.getByText('Đang mở ván…')).toBeInTheDocument();
+  expect(document.querySelector('.game-workspace--match')).toBeInTheDocument();
+});
+
+it('shows an optimistic O for a human O move', async () => {
+  const oStart = { ...base, humanStone: 'O', currentGame: { ...base.currentGame,
+    openingStone: 'O', nextStone: 'O' } };
+  let resolveMove!: (response: Response) => void;
+  const pending = new Promise<Response>(resolve => { resolveMove = resolve; });
+  setup(path => path.includes('/moves?') ? pending : json(oStart), matchId);
+  await screen.findByText('Lượt của bạn · O');
+  fireEvent.click(screen.getByRole('button', { name: 'Phóng bàn cờ' }));
+  fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
+  expect(screen.getByRole('gridcell', { name: /Hàng 1, cột 1, quân O/ })).toBeInTheDocument();
+  await act(async () => resolveMove(json(oStart)));
 });
 
 it('shows X immediately, blocks a double click, then replaces it with the server snapshot and polls for O', async () => {
@@ -90,7 +154,8 @@ it('refreshes after a stale revision and offers next game only after a finished 
   await screen.findByText('Ván 1');
   fireEvent.click(screen.getByRole('button', { name: 'Phóng bàn cờ' }));
   fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
-  await screen.findByRole('button', { name: 'Ván tiếp theo' });
+  await skipCutscene();
+  await screen.findByRole('button', { name: 'Chơi tiếp' });
   expect(screen.getByRole('alert')).toHaveTextContent(/đã thay đổi/i);
 });
 
@@ -104,11 +169,47 @@ it('starts the next game only after finish and renders an AI opening move from G
     if (path.includes(`/${matchId}`)) return json(didNext ? opened : finished);
     return error('unexpected', 500);
   }, matchId);
-  await screen.findByRole('button', { name: 'Ván tiếp theo' });
-  fireEvent.click(screen.getByRole('button', { name: 'Ván tiếp theo' }));
+  await skipCutscene();
+  await screen.findByRole('button', { name: 'Chơi tiếp' });
+  fireEvent.click(screen.getByRole('button', { name: 'Chơi tiếp' }));
   await screen.findByText('Ván 2');
   await waitFor(() => expect(screen.getByRole('gridcell', { name: /Hàng 5, cột 5, quân O/ })).toBeInTheDocument());
+  expect(screen.queryByRole('region', { name: 'Kết quả ván' })).not.toBeInTheDocument();
   expect(requests.filter(({ path }) => path.includes('/next-game?'))).toHaveLength(1);
+});
+
+it('announces a server-confirmed win, highlights its five cells, and offers the next actions', async () => {
+  const moves = [4, 5, 6, 7, 8].map((column, index) => ({ step: index + 1, row: 7, column, stone: 'X' as const }));
+  const finished = { ...base, revision: 5, xScore: 1, currentGame: { ...base.currentGame,
+    status: 'XWon', nextStone: null, turnStatus: 'finished', moves } };
+  setup(() => json(finished), matchId);
+  await skipCutscene();
+  const result = await screen.findByRole('region', { name: 'Kết quả ván' });
+  expect(result).toHaveTextContent('Bạn thắng');
+  expect(result).toHaveTextContent('5 quân liên tiếp theo hàng ngang');
+  expect(result.querySelectorAll('[data-winning-cell]')).toHaveLength(0);
+  expect(document.querySelectorAll('.gomoku-cell[data-winning-cell]')).toHaveLength(5);
+  expect(screen.getByRole('button', { name: 'Chơi tiếp' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Xem lại' })).toHaveAttribute('href', `/history/${gameId}?scope=guest`);
+  expect(screen.queryByText('Điểm: X 1 – O 0')).not.toBeInTheDocument();
+});
+
+it.each([
+  ['OWon', 'Bot thắng'],
+  ['Draw', 'Ván hòa'],
+] as const)('shows a clear %s result from the server', async (status, message) => {
+  const finished = { ...base, currentGame: { ...base.currentGame, status, nextStone: null, turnStatus: 'finished' } };
+  setup(() => json(finished), matchId);
+  if (status !== 'Draw') await skipCutscene();
+  expect(await screen.findByRole('region', { name: 'Kết quả ván' })).toHaveTextContent(message);
+});
+
+it('announces human O as winner when the server reports OWon', async () => {
+  const finished = { ...base, humanStone: 'O', currentGame: { ...base.currentGame,
+    openingStone: 'O', status: 'OWon', nextStone: null, turnStatus: 'finished' } };
+  setup(() => json(finished), matchId);
+  await skipCutscene();
+  expect(await screen.findByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bạn thắng');
 });
 
 it('clears the owner snapshot and offers a session action after 401', async () => {
@@ -197,7 +298,7 @@ it('creates one match when StrictMode replays an empty active-match lookup', asy
   expect(creates).toBe(1);
 });
 
-it('checks active matches after an uncertain create and retries the same command ID', async () => {
+it('retries an uncertain create with the same command ID', async () => {
   vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('stable-create-command') });
   let creates = 0;
   const requests = setup(path => {
@@ -210,6 +311,9 @@ it('checks active matches after an uncertain create and retries the same command
   await screen.findByText('Ván 1');
   const posts = requests.filter(({ path }) => path === '/api/v1/matches?scope=guest');
   expect(posts).toHaveLength(2);
-  expect(posts.map(({ init }) => init.body)).toEqual(['{"commandId":"stable-create-command"}', '{"commandId":"stable-create-command"}']);
-  expect(requests.filter(({ path }) => path.startsWith('/api/v1/matches/active'))).toHaveLength(2);
+  expect(posts.map(({ init }) => JSON.parse(String(init.body)))).toEqual([
+    { commandId: 'stable-create-command', humanStone: 'X', humanFirst: true, boardSize: 20, boardColumns: 30 },
+    { commandId: 'stable-create-command', humanStone: 'X', humanFirst: true, boardSize: 20, boardColumns: 30 },
+  ]);
+  expect(requests.filter(({ path }) => path.startsWith('/api/v1/matches/active'))).toHaveLength(1);
 });

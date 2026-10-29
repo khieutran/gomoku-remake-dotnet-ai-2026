@@ -98,16 +98,19 @@ it('does not create a guest on entry; a second explicit choice reuses the server
   vi.stubGlobal('fetch', fetcher);
   renderApp();
   expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/guest-sessions'))).toBe(false);
+  await user.click(screen.getByRole('button', { name: 'Chơi mới' }));
   await user.click(screen.getByRole('button', { name: 'Chơi khách' }));
   expect(await screen.findByTestId('session')).toHaveTextContent(`guest:${guestId}`);
-  expect(screen.getByTestId('path')).toHaveTextContent('/play');
+  expect(screen.getByTestId('path')).toHaveTextContent('/');
   await user.click(screen.getByRole('link', { name: 'Gomoku trang chủ' }));
+  await user.click(screen.getByRole('button', { name: 'Quay lại' }));
   await user.click(screen.getByRole('button', { name: 'Chơi khách' }));
   await waitFor(() => expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith('/guest-sessions'))).toHaveLength(2));
   expect(screen.getByTestId('session')).toHaveTextContent(`guest:${guestId}`);
 });
 
 it('restores a signed-in account on the home page and offers play under that account', async () => {
+  const user = userEvent.setup();
   const fetcher = vi.fn(async (url: string) => {
     if (url.endsWith('/auth/me')) return json({ userId: accountId, email: 'a@example.com' });
     throw Error(`Unexpected request: ${url}`);
@@ -115,7 +118,9 @@ it('restores a signed-in account on the home page and offers play under that acc
   vi.stubGlobal('fetch', fetcher);
   renderApp();
   await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent(`account:${accountId}`));
-  expect(screen.getByRole('link', { name: 'Chơi tiếp' })).toHaveAttribute('href', '/play?scope=account');
+  await user.click(screen.getByRole('button', { name: 'Chơi mới' }));
+  await user.click(screen.getByRole('button', { name: 'Chơi với tài khoản' }));
+  expect(screen.getByRole('link', { name: 'Bắt đầu trận' })).toHaveAttribute('href', '/play?scope=account&stone=X&first=true&boardSize=20&boardColumns=30');
   expect(fetcher.mock.calls.every(([url]) => String(url).endsWith('/auth/me'))).toBe(true);
 });
 
@@ -129,6 +134,7 @@ it('switches from guest to account without keeping guest match data', async () =
     throw Error(`Unexpected request: ${url}`);
   }));
   const query = renderApp();
+  await user.click(screen.getByRole('button', { name: 'Chơi mới' }));
   await user.click(screen.getByRole('button', { name: 'Chơi khách' }));
   await screen.findByText(`guest:${guestId}`);
   query.setQueryData(queryKeys.match({ scope: 'guest', ownerId: guestId }, matchId), { from: 'guest' });
@@ -138,7 +144,7 @@ it('switches from guest to account without keeping guest match data', async () =
   await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
   expect(await screen.findByTestId('session')).toHaveTextContent(`account:${accountId}`);
   expect(query.getQueryData(queryKeys.match({ scope: 'guest', ownerId: guestId }, matchId))).toBeUndefined();
-  expect(screen.getByTestId('path')).toHaveTextContent('/play');
+  await waitFor(() => expect(screen.getByTestId('path')).toHaveTextContent('/play'));
 });
 
 it('keeps the match URL but clears account data when the auth cookie is lost', async () => {

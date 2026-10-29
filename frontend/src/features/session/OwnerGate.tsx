@@ -6,7 +6,7 @@ function returnPath(pathname: string, search: string) {
   return `${pathname}${search}`;
 }
 
-export function GuestStartButton({ children = 'Chơi khách' }: { children?: ReactNode }) {
+export function GuestStartButton({ children = 'Chơi khách', to = '/play?scope=guest' }: { children?: ReactNode; to?: string }) {
   const { chooseGuest } = useSession();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
@@ -17,7 +17,7 @@ export function GuestStartButton({ children = 'Chơi khách' }: { children?: Rea
     setError(false);
     try {
       await chooseGuest();
-      navigate('/play?scope=guest');
+      navigate(to);
     } catch {
       setError(true);
     } finally {
