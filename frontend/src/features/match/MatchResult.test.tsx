@@ -14,7 +14,7 @@ const game = {
 function renderResult(status: MatchDto['currentGame']['status'] = 'XWon', humanStone: 'X' | 'O' = 'X') {
   const onNext = vi.fn();
   const view = render(<MemoryRouter><MatchResult game={{ ...game, status }} humanStone={humanStone}
-    scope="guest" line={null} busy={false} onNext={onNext} /></MemoryRouter>);
+    scope="guest" busy={false} onNext={onNext} /></MemoryRouter>);
   return { ...view, onNext, video: () => view.container.querySelector('video') };
 }
 
@@ -30,7 +30,7 @@ it('plays one human cutscene and then reveals the existing result actions', () =
   expect(view.video()?.muted).toBe(true);
   expect(screen.queryByRole('region', { name: 'Kết quả ván' })).not.toBeInTheDocument();
   fireEvent.ended(view.video()!);
-  expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bạn thắng');
+  expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Quá Gà, Chưa đủ tuổi!');
   expect(screen.getByRole('button', { name: 'Chơi tiếp' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Xem lại' })).toBeInTheDocument();
 });
@@ -40,10 +40,10 @@ it('keeps the same robot video across rerenders and lets the player skip it', ()
   const view = renderResult('XWon', 'O');
   expect(view.video()).toHaveAttribute('src', '/videos/finish/frame-electric.webm');
   view.rerender(<MemoryRouter><MatchResult game={{ ...game, status: 'XWon' }} humanStone="O"
-    scope="guest" line={null} busy={false} onNext={view.onNext} /></MemoryRouter>);
+    scope="guest" busy={false} onNext={view.onNext} /></MemoryRouter>);
   expect(view.video()).toHaveAttribute('src', '/videos/finish/frame-electric.webm');
   fireEvent.click(screen.getByRole('button', { name: 'Bỏ qua hoạt cảnh' }));
-  expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bot thắng');
+  expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('BOT VICTORY');
 });
 
 it('shows the result immediately for a draw or reduced motion', () => {
@@ -54,7 +54,7 @@ it('shows the result immediately for a draw or reduced motion', () => {
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   const reduced = renderResult();
   expect(reduced.video()).toBeNull();
-  expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bạn thắng');
+  expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Quá Gà, Chưa đủ tuổi!');
 });
 
 it('falls back to the result if playback errors or autoplay is blocked', async () => {

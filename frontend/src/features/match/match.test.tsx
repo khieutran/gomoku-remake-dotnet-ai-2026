@@ -185,8 +185,8 @@ it('announces a server-confirmed win, highlights its five cells, and offers the 
   setup(() => json(finished), matchId);
   await skipCutscene();
   const result = await screen.findByRole('region', { name: 'Kết quả ván' });
-  expect(result).toHaveTextContent('Bạn thắng');
-  expect(result).toHaveTextContent('5 quân liên tiếp theo hàng ngang');
+  expect(result).toHaveTextContent('Quá Gà, Chưa đủ tuổi!');
+  expect(result).not.toHaveTextContent('5 quân liên tiếp');
   expect(result.querySelectorAll('[data-winning-cell]')).toHaveLength(0);
   expect(document.querySelectorAll('.gomoku-cell[data-winning-cell]')).toHaveLength(5);
   expect(screen.getByRole('button', { name: 'Chơi tiếp' })).toBeInTheDocument();
@@ -195,7 +195,7 @@ it('announces a server-confirmed win, highlights its five cells, and offers the 
 });
 
 it.each([
-  ['OWon', 'Bot thắng'],
+  ['OWon', 'BOT VICTORY'],
   ['Draw', 'Ván hòa'],
 ] as const)('shows a clear %s result from the server', async (status, message) => {
   const finished = { ...base, currentGame: { ...base.currentGame, status, nextStone: null, turnStatus: 'finished' } };
@@ -209,7 +209,7 @@ it('announces human O as winner when the server reports OWon', async () => {
     openingStone: 'O', status: 'OWon', nextStone: null, turnStatus: 'finished' } };
   setup(() => json(finished), matchId);
   await skipCutscene();
-  expect(await screen.findByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bạn thắng');
+  expect(await screen.findByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Quá Gà, Chưa đủ tuổi!');
 });
 
 it('clears the owner snapshot and offers a session action after 401', async () => {

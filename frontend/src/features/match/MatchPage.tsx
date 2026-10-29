@@ -77,7 +77,7 @@ export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scop
         <Board size={snapshot.boardSize} columns={snapshot.boardColumns} moves={moves} winningCells={winningLine?.cells} interactive={!introVisible && currentGame.turnStatus === 'human' && !flow.busy && !flow.pendingMove && !flow.canRetry} onMove={flow.play} />
         {introVisible && <VersusIntro />}
         {currentGame.turnStatus === 'finished' && revealedGameId === currentGame.id &&
-      <MatchResult key={currentGame.id} game={currentGame} humanStone={snapshot.humanStone} scope={scope} line={winningLine} busy={flow.busy} onNext={flow.nextGame} />}
+      <MatchResult key={currentGame.id} game={currentGame} humanStone={snapshot.humanStone} scope={scope} busy={flow.busy} onNext={flow.nextGame} />}
       </div></section>
     </Window>}
     top={<Window title="Trạng thái"><MatchStatus snapshot={snapshot} />{flow.error && <p role="alert">{flow.error}</p>}</Window>}

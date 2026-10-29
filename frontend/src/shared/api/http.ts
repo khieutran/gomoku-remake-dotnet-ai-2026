@@ -21,7 +21,7 @@ async function parseResponse<T>(response: Response, schema: z.ZodType<T>): Promi
   }
   if (!response.ok) {
     const parsed = errorSchema.safeParse(body)
-    if (parsed.success) throw new ApiError(response.status, parsed.data.code, parsed.data.message, parsed.data.traceId)
+    if (parsed.success) throw new ApiError(response.status, parsed.data.code, parsed.data.message, parsed.data.traceId, parsed.data.errors ?? undefined)
     throw new ApiError(response.status, 'http_error', 'The request could not be completed.')
   }
   const parsed = schema.safeParse(body)
