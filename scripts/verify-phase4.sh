@@ -46,7 +46,9 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-npm ci >"$log_dir/npm-ci.log" 2>&1
+if [[ "${GOMOKU_SKIP_NPM_CI:-0}" != 1 ]]; then
+  npm ci >"$log_dir/npm-ci.log" 2>&1
+fi
 bash scripts/test-web.sh >"$log_dir/web.log" 2>&1
 docker compose up --build --wait -d redis api >"$log_dir/compose-up.log" 2>&1
 test_database=gomoku_phase4_tests

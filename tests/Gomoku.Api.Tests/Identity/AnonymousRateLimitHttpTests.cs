@@ -125,6 +125,38 @@ public sealed class AnonymousRateLimitHttpTests
         Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
     }
 
+    [Fact]
+    public async Task ConfiguredProxyUsesForwardedHttpsScheme()
+    {
+        using var factory = OpenFactory(builder =>
+            builder.UseSetting("RateLimiting:KnownProxies:0", "127.0.0.1"));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-Remote-IP", "127.0.0.1");
+        client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+
+        using var response = await client.GetAsync("/api/v1/auth/csrf");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(response.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("gomoku.csrf=") && value.Contains("secure", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task UntrustedClientCannotSpoofForwardedHttpsScheme()
+    {
+        using var factory = OpenFactory(builder =>
+            builder.UseSetting("RateLimiting:KnownProxies:0", "127.0.0.1"));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-Remote-IP", "192.0.2.11");
+        client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+
+        using var response = await client.GetAsync("/api/v1/auth/csrf");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(response.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("gomoku.csrf=") && !value.Contains("secure", StringComparison.OrdinalIgnoreCase));
+    }
+
     private sealed class TestRemoteIpStartupFilter : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>

@@ -10,6 +10,8 @@ public sealed class GomokuDbContextFactory : IDesignTimeDbContextFactory<GomokuD
         var connectionString = Environment.GetEnvironmentVariable("GOMOKU_POSTGRES_CONNECTION")
             ?? Environment.GetEnvironmentVariable("ConnectionStrings__Gomoku")
             ?? "Host=127.0.0.1;Port=55432;Database=gomoku;Username=gomoku;Password=gomoku_dev";
+        connectionString = PostgresConnectionString.WithPasswordFile(
+            connectionString, Environment.GetEnvironmentVariable("GOMOKU_POSTGRES_PASSWORD_FILE"));
 
         var options = new DbContextOptionsBuilder<GomokuDbContext>()
             .UseNpgsql(connectionString).Options;

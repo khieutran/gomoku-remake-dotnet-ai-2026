@@ -1,0 +1,138 @@
+# Standalone production stack. Use with --env-file .env.production; do not combine with compose.yaml.
+x-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    logging: *bounded-logging
+    environment:
+      POSTGRES_DB: gomoku
+      POSTGRES_USER: gomoku
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - gomoku_postgres:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gomoku -d gomoku"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:8.2-alpine
+    restart: unless-stopped
+    logging: *bounded-logging
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  migrate:
+    profiles: ["migration"]
+    image: ${GOMOKU_API_IMAGE:?set immutable private image digest}
+    entrypoint: ["/app/efbundle"]
+    environment:
+      GOMOKU_POSTGRES_CONNECTION: "Host=postgres;Port=5432;Database=gomoku;Username=gomoku"
+      GOMOKU_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    networks:
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    logging: *bounded-logging
+
+  api:
+    image: ${GOMOKU_API_IMAGE:?set immutable private image digest}
+    restart: unless-stopped
+    logging: *bounded-logging
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      AllowedHosts: ${GOMOKU_DOMAIN:?set public domain}
+      ConnectionStrings__Gomoku: "Host=postgres;Port=5432;Database=gomoku;Username=gomoku"
+      GOMOKU_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      ConnectionStrings__Redis: "redis:6379,abortConnect=false,connectTimeout=500,asyncTimeout=500"
+      GOMOKU_REDIS_NAMESPACE: ${GOMOKU_REDIS_NAMESPACE:?set unique Redis namespace}
+      GOMOKU_DP_KEYS_DIR: /app/keys
+      GOMOKU_DP_CERT_FILE: /run/secrets/data_protection_certificate
+      GOMOKU_DP_CERT_PASSWORD_FILE: /run/secrets/data_protection_certificate_password
+      RateLimiting__KnownProxies__0: ${GOMOKU_PROXY_IP:-172.29.217.10}
+    secrets:
+      - postgres_password
+      - data_protection_certificate
+      - data_protection_certificate_password
+    volumes:
+      - gomoku_keys:/app/keys
+    networks:
+      - front
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *bounded-logging
+    environment:
+      GOMOKU_DOMAIN: ${GOMOKU_DOMAIN:?set public domain}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      front:
+        ipv4_address: ${GOMOKU_PROXY_IP:-172.29.217.10}
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  front:
+    ipam:
+      config:
+        - subnet: ${GOMOKU_FRONT_SUBNET:-172.29.217.0/24}
+  data:
+    internal: true
+
+volumes:
+  gomoku_postgres:
+  gomoku_keys:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  postgres_password:
+    file: ${GOMOKU_POSTGRES_PASSWORD_FILE:?set path to private password file}
+  data_protection_certificate:
+    file: ${GOMOKU_DP_CERT_FILE:?set path to private PKCS12 certificate}
+  data_protection_certificate_password:
+    file: ${GOMOKU_DP_CERT_PASSWORD_FILE:?set path to private certificate password file}

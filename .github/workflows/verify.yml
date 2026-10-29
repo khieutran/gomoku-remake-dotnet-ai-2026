@@ -1,0 +1,30 @@
+name: Verify Gomoku
+
+'on':
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install frontend dependencies and Playwright browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run Phase 4 verification
+        env:
+          GOMOKU_SKIP_NPM_CI: '1'
+        run: bash scripts/verify-phase4.sh verify
