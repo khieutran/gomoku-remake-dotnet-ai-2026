@@ -41,7 +41,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const account = await sessionApi.me(controller.signal);
         if (current !== generation.current || controller.signal.aborted) return;
         bootstrapped.current = true;
-        await changeSession({ scope: 'account', ownerId: account.userId });
+        await changeSession({ scope: 'account', ownerId: account.userId, email: account.email });
       } catch (accountError) {
         if (current !== generation.current || controller.signal.aborted) return;
         if (!(accountError instanceof ApiError && accountError.status === 401)) {
@@ -79,7 +79,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const account = await sessionApi.login(email, password);
     if (current === generation.current) {
       bootstrapped.current = true;
-      await changeSession({ scope: 'account', ownerId: account.userId });
+      await changeSession({ scope: 'account', ownerId: account.userId, email: account.email });
     }
   }, [changeSession]);
 
@@ -88,7 +88,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const account = await sessionApi.register(email, password);
     if (current === generation.current) {
       bootstrapped.current = true;
-      await changeSession({ scope: 'account', ownerId: account.userId });
+      await changeSession({ scope: 'account', ownerId: account.userId, email: account.email });
     }
   }, [changeSession]);
 
@@ -107,7 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (current !== generation.current) return;
     try {
       const account = await sessionApi.me();
-      if (current === generation.current) await changeSession({ scope: 'account', ownerId: account.userId });
+      if (current === generation.current) await changeSession({ scope: 'account', ownerId: account.userId, email: account.email });
     } catch (reason) {
       if (current !== generation.current) return;
       if (!(reason instanceof ApiError && reason.status === 401)) setError('Không kiểm tra được phiên. Hãy thử lại.');

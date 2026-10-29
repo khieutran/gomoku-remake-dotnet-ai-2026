@@ -46,19 +46,19 @@ describe('Board', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Phóng bàn cờ' }));
     fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
     expect(onMove).toHaveBeenCalledExactlyOnceWith(0, 0);
-    fireEvent.click(screen.getByRole('button', { name: 'Thu bàn cờ' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Toàn cảnh' }));
     expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toHaveFocus();
   });
-  it('requires 40px cells before enabling inline interaction', () => {
+  it('requires 28px mouse cells before enabling inline interaction', () => {
     const onMove = vi.fn();
     render(<Board size={20} moves={[]} interactive onMove={onMove} />);
-    width(600);
+    width(500);
     fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
     expect(onMove).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toBeInTheDocument();
-    width(803);
+    width(563);
     expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toBeInTheDocument();
-    width(820);
+    width(600);
     expect(screen.queryByRole('button', { name: 'Phóng bàn cờ' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
     expect(onMove).toHaveBeenCalledExactlyOnceWith(0, 0);

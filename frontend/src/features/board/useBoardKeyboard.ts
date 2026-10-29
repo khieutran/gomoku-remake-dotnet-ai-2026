@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 
-export function useBoardKeyboard(size: number, initialRow: number, initialColumn: number) {
+export function useBoardKeyboard(rows: number, columns: number, initialRow: number, initialColumn: number) {
   const [focused, setFocused] = useState({ row: initialRow, column: initialColumn });
   const cells = useRef(new Map<string, HTMLButtonElement>());
   function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, row: number, column: number, activate: () => void) {
@@ -10,7 +10,7 @@ export function useBoardKeyboard(size: number, initialRow: number, initialColumn
     const direction = directions[event.key];
     if (direction) {
       event.preventDefault();
-      const next = { row: Math.max(0, Math.min(size - 1, row + direction[0])), column: Math.max(0, Math.min(size - 1, column + direction[1])) };
+      const next = { row: Math.max(0, Math.min(rows - 1, row + direction[0])), column: Math.max(0, Math.min(columns - 1, column + direction[1])) };
       setFocused(next);
       cells.current.get(`${next.row}:${next.column}`)?.focus();
     } else if (event.key === 'Enter' || event.key === ' ') {

@@ -5,7 +5,7 @@ import { ZoomableBoard } from './ZoomableBoard';
 import './board.css';
 
 export interface BoardMove { step: number; row: number; column: number; stone: 'X' | 'O' }
-export interface BoardProps { size: number; moves: readonly BoardMove[]; interactive: boolean; onMove?: (row: number, column: number) => void }
+export interface BoardProps { size: number; columns?: number; moves: readonly BoardMove[]; interactive: boolean; onMove?: (row: number, column: number) => void; winningCells?: readonly [row: number, column: number][]; preview?: boolean }
 
 export function Board(props: BoardProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -14,26 +14,27 @@ export function Board(props: BoardProps) {
   const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     const element = container.current;
-    if (!element) return;
+    if (!element || props.preview || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(entries => setWidth(entries[0]?.contentRect.width ?? 0));
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
-  // Reserve the grid border so every desktop cell reaches the target size.
-  const compact = (width - 4) / props.size < 40;
+  }, [props.preview]);
+  // Small mouse targets remain playable; coarse pointers use the zoomed 44px cells.
+  const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  const compact = (width - 4) / (props.columns ?? props.size) < (coarsePointer ? 40 : 28);
   function closeZoom() {
     restoreZoomFocus.current = true;
     setZoomed(false);
   }
-  return <div className="gomoku-board" ref={container}>
-    {compact && zoomed ? <>
-      <button type="button" className="gomoku-zoom-button" onClick={closeZoom}>Thu bàn cờ</button>
+  return <div className={`gomoku-board${(props.columns ?? props.size) > props.size ? ' gomoku-board--wide' : ''}`} ref={container}>
+    {props.preview ? <BoardOverview {...props} /> : compact && zoomed ? <>
+      <button type="button" className="gomoku-zoom-button" onClick={closeZoom}>Toàn cảnh</button>
       <p className="gomoku-board-help">Vuốt hoặc cuộn để di chuyển. Dùng phím mũi tên, Enter hoặc Space để đặt quân.</p>
       <ZoomableBoard {...props} />
     </> : compact ? <>
       <BoardOverview {...props} />
-      <p className="gomoku-board-help">Bàn tổng quan. Phóng to để chọn ô chính xác.</p>
+      <p className="gomoku-board-help sr-only">Bàn tổng quan. Phóng to để chọn ô chính xác.</p>
     </> : <BoardGrid {...props} />}
-    {compact && !zoomed && <button type="button" className="gomoku-zoom-button" ref={element => { if (element && restoreZoomFocus.current) { element.focus(); restoreZoomFocus.current = false; } }} onClick={() => setZoomed(true)}>Phóng bàn cờ</button>}
+    {compact && !zoomed && !props.preview && <button type="button" className="gomoku-zoom-button" ref={element => { if (element && restoreZoomFocus.current) { element.focus(); restoreZoomFocus.current = false; } }} onClick={() => setZoomed(true)}>Phóng bàn cờ</button>}
   </div>;
 }

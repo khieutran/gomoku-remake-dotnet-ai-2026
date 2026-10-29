@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-export type Session = { scope: 'account'; ownerId: string } | { scope: 'guest'; ownerId: string } | { scope: 'none' };
+export type Session = { scope: 'account'; ownerId: string; email?: string } | { scope: 'guest'; ownerId: string } | { scope: 'none' };
 export type SessionContextValue = {
   session: Session;
   ready: boolean;
