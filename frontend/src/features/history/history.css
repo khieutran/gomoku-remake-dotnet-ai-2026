@@ -1,4 +1,4 @@
-.history-window { width: min(100%, 1120px); margin-inline: auto; }
+.history-window { width: calc(100% - clamp(250px, 25vw, 320px) - clamp(20px, 2vw, 32px)); margin-inline: 0; }
 .history-window .window-body { padding: clamp(18px, 2.5vw, 30px); }
 .history-page { display: grid; gap: 24px; }
 .history-page h1 { margin-bottom: 0; }
@@ -33,3 +33,4 @@
   .history-table-moves { display: none; }
   .history-result { min-width: 86px; padding-inline: 5px; font-size: .85rem; }
 }
+@media (max-width: 850px) { .history-window { width: 100%; } }

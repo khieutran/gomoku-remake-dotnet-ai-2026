@@ -1,4 +1,4 @@
-.leaderboard-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(240px, .7fr); gap: 24px; align-items: start; width: min(100%, 1180px); margin-inline: auto; }
+.leaderboard-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(250px, 25vw, 320px); gap: clamp(20px, 2vw, 32px); align-items: start; width: 100%; margin-inline: auto; }
 .leaderboard-layout .window-body { padding: clamp(18px, 2.5vw, 30px); }
 .leaderboard-layout h1 { margin-bottom: 8px; }
 .leaderboard-layout p { color: #654a50; }
@@ -29,8 +29,10 @@
 .leaderboard-stats dt, .match-score-values dt { font-size: .875rem; font-weight: 700; }
 .leaderboard-stats dd, .match-score-values dd { margin: 0; font: 700 1.6rem/1.3 var(--font-display); }
 .match-score-panel { padding: 16px; border: 2px solid var(--line); background: var(--paper); }
-@media (max-width: 700px) {
+@media (max-width: 850px) {
   .leaderboard-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@media (max-width: 700px) {
   .leaderboard-layout th, .leaderboard-row td { padding-inline: 8px; }
   .leaderboard-row td:first-child { width: 54px; }
   .leaderboard-rank { width: 32px; height: 32px; }
