@@ -26,6 +26,7 @@ function ReplayContent({ scope, gameId, identity }: { scope: OwnerScope; gameId:
   const queryClient = useQueryClient();
   const [locked, setLocked] = useState(false);
   const [step, setStep] = useState(0);
+  const [boardHeaderActions, setBoardHeaderActions] = useState<HTMLDivElement | null>(null);
   const game = useQuery({ queryKey: queryKeys.historyGame(identity, gameId), queryFn: ({ signal }) => getHistoryGame(scope, gameId, signal), retry: false, enabled: !locked });
   const expired = game.error instanceof ApiError && game.error.status === 401;
   useEffect(() => {
@@ -45,7 +46,7 @@ function ReplayContent({ scope, gameId, identity }: { scope: OwnerScope; gameId:
   const shown = moves.slice(0, step);
   const winningLine = step === moves.length ? findWinningLine(moves, game.data.boardSize, game.data.status, game.data.boardColumns ?? game.data.boardSize) : null;
   return <GameWorkspace variant="match"
-    main={<Window title="Ván đấu" className="workspace-main-window match-window"><section className="match-page" aria-label="Phát lại"><div className="match-board-stage"><Board size={game.data.boardSize} columns={game.data.boardColumns ?? game.data.boardSize} moves={shown} winningCells={winningLine?.cells} interactive={false} /></div></section></Window>}
+    main={<Window title="Ván đấu" className="workspace-main-window match-window" headerActionsRef={setBoardHeaderActions}><section className="match-page" aria-label="Phát lại"><div className="match-board-stage"><Board size={game.data.boardSize} columns={game.data.boardColumns ?? game.data.boardSize} moves={shown} winningCells={winningLine?.cells} interactive={false} zoomControlTarget={boardHeaderActions} /></div></section></Window>}
     top={<Window title="Trạng thái"><div className="replay-status"><span>Ván {game.data.number} · {game.data.status}</span><span aria-live="polite">Bước {step} / {moves.length}</span></div></Window>}
     bottom={<Window title="Điều khiển"><div className="replay-actions">
       <button type="button" className="button" disabled={step === 0} onClick={() => setStep(value => value - 1)}>Bước trước</button>

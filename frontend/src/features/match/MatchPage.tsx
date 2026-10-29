@@ -15,6 +15,7 @@ import './match.css';
 
 export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scope: OwnerScope; matchId?: string; identity?: OwnerIdentity }) {
   const [params] = useSearchParams();
+  const [boardHeaderActions, setBoardHeaderActions] = useState<HTMLDivElement | null>(null);
   const stone = params.get('stone');
   const first = params.get('first');
   const defaultSize = 20;
@@ -58,7 +59,7 @@ export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scop
     if (!flow.unauthorized) notifiedSession.current = false;
   }, [flow.unauthorized, scope, session]);
   if (flow.loading) return <GameWorkspace variant="match"
-    main={<Window title="Ván đấu" className="workspace-main-window match-window"><h1 className="sr-only" tabIndex={-1}>Đấu với bot</h1><section className="match-page" aria-label="Bàn chơi"><div className="match-board-stage"><Board size={setup?.boardSize ?? defaultSize} columns={setup?.boardColumns ?? defaultColumns} moves={[]} interactive={false} />{!matchId && <VersusIntro playing={false} />}{matchId && <div className="match-result-overlay"><p role="status">Đang tải ván đấu…</p></div>}</div></section></Window>}
+    main={<Window title="Ván đấu" className="workspace-main-window match-window" headerActionsRef={setBoardHeaderActions}><h1 className="sr-only" tabIndex={-1}>Đấu với bot</h1><section className="match-page" aria-label="Bàn chơi"><div className="match-board-stage"><Board size={setup?.boardSize ?? defaultSize} columns={setup?.boardColumns ?? defaultColumns} moves={[]} interactive={false} zoomControlTarget={boardHeaderActions} />{!matchId && <VersusIntro playing={false} />}{matchId && <div className="match-result-overlay"><p role="status">Đang tải ván đấu…</p></div>}</div></section></Window>}
     top={<Window title="Trạng thái"><p>Đang mở ván…</p></Window>}
     bottom={<Window title="Bảng điểm"><p>Đang tải điểm trận…</p></Window>}
   />;
@@ -71,10 +72,10 @@ export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scop
   const moves = flow.pendingMove ? [...snapshot.currentGame.moves, flow.pendingMove] : snapshot.currentGame.moves;
   const winningLine = currentGame.turnStatus === 'finished' ? findWinningLine(currentGame.moves, snapshot.boardSize, currentGame.status, snapshot.boardColumns) : null;
   return <GameWorkspace variant="match"
-    main={<Window title="Ván đấu" className="workspace-main-window match-window">
+    main={<Window title="Ván đấu" className="workspace-main-window match-window" headerActionsRef={setBoardHeaderActions}>
       <h1 className="sr-only" tabIndex={-1}>Đấu với bot</h1>
       <section className="match-page" aria-label="Bàn chơi"><div className="match-board-stage">
-        <Board size={snapshot.boardSize} columns={snapshot.boardColumns} moves={moves} winningCells={winningLine?.cells} interactive={!introVisible && currentGame.turnStatus === 'human' && !flow.busy && !flow.pendingMove && !flow.canRetry} onMove={flow.play} />
+        <Board size={snapshot.boardSize} columns={snapshot.boardColumns} moves={moves} winningCells={winningLine?.cells} interactive={!introVisible && currentGame.turnStatus === 'human' && !flow.busy && !flow.pendingMove && !flow.canRetry} onMove={flow.play} zoomControlTarget={boardHeaderActions} />
         {introVisible && <VersusIntro />}
         {currentGame.turnStatus === 'finished' && revealedGameId === currentGame.id &&
       <MatchResult key={currentGame.id} game={currentGame} humanStone={snapshot.humanStone} scope={scope} busy={flow.busy} onNext={flow.nextGame} />}
