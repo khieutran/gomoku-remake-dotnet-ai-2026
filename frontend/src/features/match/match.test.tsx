@@ -61,25 +61,25 @@ it('sends selected O and bot-first setup when no saved match exists', async () =
   expect(screen.getByRole('region', { name: 'Điểm trận' })).toHaveTextContent('Bạn O0Bot X0');
 });
 
-it('creates the selected 40 by 40 board', async () => {
+it('uses the fixed 20 by 30 desktop board even when an old size is in the URL', async () => {
   const requests = setup(path => path.includes('/active?')
     ? json({ items: [], nextCursor: null })
-    : path === '/api/v1/matches?scope=guest' ? json({ ...base, boardSize: 40 }, 201) : error('unexpected', 500),
+    : path === '/api/v1/matches?scope=guest' ? json({ ...base, boardSize: 20, boardColumns: 30 }, 201) : error('unexpected', 500),
   undefined, owner, '/play?scope=guest&stone=X&first=true&boardSize=40');
   await screen.findByText('Ván 1');
   const create = requests.find(({ path }) => path === '/api/v1/matches?scope=guest');
-  expect(JSON.parse(String(create?.init.body))).toMatchObject({ boardSize: 40 });
-  expect(screen.getByRole('grid', { name: 'Bàn cờ 40 nhân 40' })).toBeInTheDocument();
+  expect(JSON.parse(String(create?.init.body))).toMatchObject({ boardSize: 20, boardColumns: 30 });
+  expect(screen.getByRole('grid', { name: 'Bàn cờ 20 nhân 30' })).toBeInTheDocument();
 });
 
 it('starts a selected board instead of resuming an older active match', async () => {
   const requests = setup(path => path.includes('/active?')
     ? json({ items: [{ matchId, gameId, revision: 0, updatedAt: '2026-10-27T00:00:00Z' }], nextCursor: null })
-    : path === '/api/v1/matches?scope=guest' ? json({ ...base, boardSize: 30 }, 201)
+    : path === '/api/v1/matches?scope=guest' ? json({ ...base, boardSize: 20, boardColumns: 30 }, 201)
       : path.includes(`/${matchId}`) ? json(base) : error('unexpected', 500),
   undefined, owner, '/play?scope=guest&stone=X&first=true&boardSize=30');
   await screen.findByText('Ván 1');
-  expect(screen.getByRole('grid', { name: 'Bàn cờ 30 nhân 30' })).toBeInTheDocument();
+  expect(screen.getByRole('grid', { name: 'Bàn cờ 20 nhân 30' })).toBeInTheDocument();
   expect(requests.some(({ path }) => path === '/api/v1/matches?scope=guest')).toBe(true);
 });
 
@@ -87,7 +87,7 @@ it('keeps the selected board frame visible while a new match is loading', async 
   const pending = new Promise<Response>(() => {});
   setup(path => path === '/api/v1/matches?scope=guest' ? pending : error('unexpected', 500),
     undefined, owner, '/play?scope=guest&stone=O&first=false&boardSize=30');
-  expect(screen.getByRole('grid', { name: 'Bàn cờ 30 nhân 30' })).toBeInTheDocument();
+  expect(screen.getByRole('grid', { name: 'Bàn cờ 20 nhân 30' })).toBeInTheDocument();
   expect(screen.getByText('Đang mở ván…')).toBeInTheDocument();
   expect(document.querySelector('.game-workspace--match')).toBeInTheDocument();
 });

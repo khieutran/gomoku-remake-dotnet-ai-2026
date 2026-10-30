@@ -31,21 +31,21 @@ test('starting on desktop keeps the main frame and shows two panels on its right
   expect(status!.x).toBeGreaterThan(board!.x + board!.width);
   expect(score!.x).toBeGreaterThan(board!.x + board!.width);
   expect(status!.y).toBeLessThan(score!.y);
-  expect(board!.width).toBeLessThanOrEqual(830);
+  expect(board!.width).toBeLessThanOrEqual(1000);
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(900);
   await expect(page.getByRole('button', { name: 'Phóng bàn cờ' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Điểm trận' }).getByRole('link', { name: 'Rời bàn cờ' })).toBeVisible();
 });
 
-test('mobile keeps status above the board and actions below without page overflow', async ({ page }) => {
+test('mobile keeps the board above status and actions without page overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockGuestMatch(page);
   const status = await page.getByRole('region', { name: 'Trạng thái ván đấu' }).boundingBox();
   const score = await page.getByRole('region', { name: 'Điểm trận' }).boundingBox();
   const board = await page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' }).boundingBox();
   expect(status && score && board).toBeTruthy();
-  expect(status!.y + status!.height).toBeLessThanOrEqual(board!.y);
-  expect(score!.y).toBeGreaterThan(board!.y + board!.height);
+  expect(status!.y).toBeGreaterThan(board!.y + board!.height);
+  expect(score!.y).toBeGreaterThan(status!.y + status!.height);
   expect(board!.y).toBeLessThan(460);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(844);

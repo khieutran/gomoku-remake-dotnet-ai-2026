@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openSiteMenu } from './fixture';
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -7,8 +8,10 @@ test('lost account cookie hides its match until the same account signs in again'
   const password = `P4-${crypto.randomUUID()}!`;
   await page.goto('/register');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(password);
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng ký' }).click();
+  await expect(page.locator('#site-navigation .nav-action')).toHaveText('Đăng xuất');
+  await openSiteMenu(page);
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto('/play?scope=account');
   await expect(page.getByRole('heading', { name: 'Ván 1' })).toBeVisible();
@@ -22,8 +25,10 @@ test('lost account cookie hides its match until the same account signs in again'
   await expect(page.getByRole('grid', { name: /Bàn cờ/ })).toHaveCount(0);
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(password);
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await expect(page.locator('#site-navigation .nav-action')).toHaveText('Đăng xuất');
+  await openSiteMenu(page);
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto(matchUrl!);
   await expect(page.getByRole('heading', { name: 'Ván 1' })).toBeVisible();
@@ -33,6 +38,7 @@ test('account scope cannot read a guest-owned match', async ({ page }) => {
   await page.goto('/play?scope=guest');
   await page.getByRole('button', { name: 'Bắt đầu chơi khách' }).click();
   await expect(page.getByRole('heading', { name: 'Ván 1' })).toBeVisible();
+  await openSiteMenu(page);
   await page.getByRole('link', { name: 'Lịch sử' }).click();
   const guestHref = await page.getByRole('region', { name: 'Ván dở' }).getByRole('link', { name: 'Ván dở 1' }).getAttribute('href');
   const guestId = guestHref?.split('/play/')[1]?.split('?')[0];
@@ -40,8 +46,10 @@ test('account scope cannot read a guest-owned match', async ({ page }) => {
   const email = `phase4-owner-${crypto.randomUUID()}@example.test`;
   await page.goto('/register');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(`P4-${crypto.randomUUID()}!`);
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(`P4-${crypto.randomUUID()}!`);
   await page.getByRole('button', { name: 'Đăng ký' }).click();
+  await expect(page.locator('#site-navigation .nav-action')).toHaveText('Đăng xuất');
+  await openSiteMenu(page);
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto(`/play/${guestId}?scope=account`);
   await expect(page.getByRole('alert')).toBeVisible();
@@ -53,6 +61,7 @@ test('lost guest cookie cannot recover private active history', async ({ page, c
   await page.getByRole('button', { name: 'Bắt đầu chơi khách' }).click();
   await expect(page.getByRole('heading', { name: 'Ván 1' })).toBeVisible();
   await context.clearCookies();
+  await openSiteMenu(page);
   await page.getByRole('link', { name: 'Lịch sử' }).click();
   await expect(page.getByRole('alert')).toContainText('Không thể truy cập phiên khách cũ');
   await expect(page.getByRole('link', { name: 'Ván dở 1' })).toHaveCount(0);

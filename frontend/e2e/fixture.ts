@@ -1,6 +1,14 @@
 import type { Page } from '@playwright/test';
 
 export const matchId = '821412da-c99d-45be-a7e9-328fb464380b';
+
+export async function openSiteMenu(page: Page) {
+  const menu = page.getByRole('button', { name: 'Menu' });
+  if (await menu.isVisible() && await menu.getAttribute('aria-expanded') === 'false') {
+    await menu.click();
+  }
+}
+
 const gameId = '933412da-c99d-45be-a7e9-328fb464380b';
 const base = {
   matchId, boardSize: 20, boardColumns: 20, ruleVersion: 'v1', revision: 0, xScore: 0, oScore: 0,
@@ -46,5 +54,6 @@ export async function mockGuestMatch(page: Page, startAtHome = false, beforeStar
     await page.getByRole('button', { name: 'Bắt đầu chơi khách' }).click();
   }
   await page.getByRole('heading', { name: 'Ván 1' }).waitFor();
+  await page.locator('.versus-intro').waitFor({ state: 'detached' });
   return moves;
 }

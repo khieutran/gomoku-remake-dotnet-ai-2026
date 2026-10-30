@@ -1,6 +1,10 @@
 name: Verify Gomoku
 
 'on':
+  push:
+    branches:
+      - main
+      - feat/phase-4-ui
   pull_request:
   workflow_dispatch:
 
@@ -28,3 +32,39 @@ jobs:
         env:
           GOMOKU_SKIP_NPM_CI: '1'
         run: bash scripts/verify-phase4.sh verify
+      - name: Upload verification logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-verification-logs
+          path: docs/Detail-phase-4/test-results/**/*.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  publish-image:
+    if: github.event_name == 'push' && github.repository == 'khieutran/gomoku-remake-dotnet-ai-2026'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Sign in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish verified image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Gomoku.Api/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
