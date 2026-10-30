@@ -20,7 +20,7 @@ test('account can log out and log back in to its saved match', async ({ page }) 
   expect(matchUrl).toBeTruthy();
   await openSiteMenu(page);
   await page.getByRole('button', { name: 'Đăng xuất' }).click();
-  await expect(page.getByRole('button', { name: 'Đăng xuất' })).toHaveCount(0);
+  await expect(page.locator('#site-navigation a[href="/login"]')).toHaveText('Tài khoản');
   await page.goto(matchUrl!);
   await expect(page.getByRole('link', { name: 'Đăng nhập để tiếp tục' })).toBeVisible();
   await page.goto('/login');
