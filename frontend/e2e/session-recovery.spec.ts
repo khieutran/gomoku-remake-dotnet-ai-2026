@@ -7,7 +7,7 @@ test('lost account cookie hides its match until the same account signs in again'
   const password = `P4-${crypto.randomUUID()}!`;
   await page.goto('/register');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(password);
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng ký' }).click();
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto('/play?scope=account');
@@ -22,7 +22,7 @@ test('lost account cookie hides its match until the same account signs in again'
   await expect(page.getByRole('grid', { name: /Bàn cờ/ })).toHaveCount(0);
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(password);
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto(matchUrl!);
@@ -40,7 +40,7 @@ test('account scope cannot read a guest-owned match', async ({ page }) => {
   const email = `phase4-owner-${crypto.randomUUID()}@example.test`;
   await page.goto('/register');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(`P4-${crypto.randomUUID()}!`);
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(`P4-${crypto.randomUUID()}!`);
   await page.getByRole('button', { name: 'Đăng ký' }).click();
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto(`/play/${guestId}?scope=account`);

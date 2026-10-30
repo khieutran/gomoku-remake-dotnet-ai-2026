@@ -29,5 +29,5 @@ test('reduced motion disables decorative motion and focus remains visible', asyn
   await zoom.focus();
   expect(await zoom.evaluate(element => getComputedStyle(element).outlineStyle)).not.toBe('none');
   expect(await zoom.evaluate(element => getComputedStyle(element).transitionDuration)).toBe('0s');
-  await expect(page.getByRole('grid', { name: 'Bàn cờ 20 nhân 30' })).toHaveAttribute('aria-readonly', 'true');
+  await expect(page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).toHaveAttribute('aria-readonly', 'true');
 });

@@ -8,8 +8,11 @@ test('entry route defers history and leaderboard code until navigation', async (
   await page.route('**/api/v1/auth/me', route => route.fulfill({ status: 401, json: { code: 'authentication_required', message: 'Sign in' } }));
   await page.route('**/api/v1/leaderboard?*', route => route.fulfill({ json: { items: [] } }));
   await page.goto('/');
-  await page.getByRole('heading', { name: 'Một nước nữa nhé' }).waitFor();
+  await page.getByRole('heading', { name: "Thử sức nếu bạn dám, Let's go!" }).waitFor();
   expect(modules.filter(url => /HistoryPage|LeaderboardPage|ReplayPage/.test(url))).toEqual([]);
+  if (await page.getByRole('button', { name: 'Menu' }).isVisible()) {
+    await page.getByRole('button', { name: 'Menu' }).click();
+  }
   await page.getByRole('link', { name: 'Xếp hạng' }).click();
   const heading = page.getByRole('heading', { name: /xếp hạng/i });
   await heading.waitFor();

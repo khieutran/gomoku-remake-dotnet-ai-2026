@@ -46,5 +46,6 @@ export async function mockGuestMatch(page: Page, startAtHome = false, beforeStar
     await page.getByRole('button', { name: 'Bắt đầu chơi khách' }).click();
   }
   await page.getByRole('heading', { name: 'Ván 1' }).waitFor();
+  await page.locator('.versus-intro').waitFor({ state: 'detached' });
   return moves;
 }

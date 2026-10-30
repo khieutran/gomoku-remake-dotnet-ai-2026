@@ -68,6 +68,10 @@
   .game-workspace--match .window-body { padding: 5px 8px; }
 }
 
+@media (max-width: 700px) and (max-height: 720px) {
+  .match-board-stage, .match-board-stage:has(.gomoku-board--wide) { width: min(100%, calc(100dvh - 390px)); }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .match-result-card { animation: result-in .24s ease-out both; }
   @keyframes result-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
