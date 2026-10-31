@@ -26,7 +26,7 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(
 
 it('plays one human cutscene and then reveals the existing result actions', () => {
   const view = renderResult();
-  expect(view.video()).toHaveAttribute('src', '/videos/finish/sword-wide.webm');
+  expect(view.video()).toHaveAttribute('src', expect.stringMatching(/sword-wide.*\.webm$/));
   expect(view.video()?.muted).toBe(true);
   expect(screen.queryByRole('region', { name: 'Kết quả ván' })).not.toBeInTheDocument();
   fireEvent.ended(view.video()!);
@@ -38,10 +38,11 @@ it('plays one human cutscene and then reveals the existing result actions', () =
 it('keeps the same robot video across rerenders and lets the player skip it', () => {
   vi.mocked(Math.random).mockReturnValueOnce(0.99).mockReturnValue(0);
   const view = renderResult('XWon', 'O');
-  expect(view.video()).toHaveAttribute('src', '/videos/finish/electric-wide.webm');
+  expect(view.video()).toHaveAttribute('src', expect.stringMatching(/electric-wide.*\.webm$/));
   view.rerender(<MemoryRouter><MatchResult game={{ ...game, status: 'XWon' }} humanStone="O"
     scope="guest" busy={false} onNext={view.onNext} /></MemoryRouter>);
-  expect(view.video()).toHaveAttribute('src', '/videos/finish/electric-wide.webm');
+  expect(view.video()).toHaveAttribute('src', expect.stringMatching(/electric-wide.*\.webm$/));
+  fireEvent.playing(view.video()!);
   fireEvent.click(screen.getByRole('button', { name: 'Bỏ qua hoạt cảnh' }));
   expect(screen.getByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bot thắng!');
 });
@@ -84,23 +85,37 @@ it('names who won and taunts the bot, not the winner, with the winner character'
   expect(result.querySelector('img')).toHaveAttribute('src', expect.stringContaining('knight'));
 });
 
-it('rotates the bot taunt by game number so repeated losses do not repeat one line', () => {
+it('picks a random taunt from the winner side, including the new lines, and keeps it for the game', () => {
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
-  const taunts = new Set<string>();
-  for (const number of [1, 2, 3]) {
-    const view = render(<MemoryRouter><MatchResult game={{ ...game, number, status: 'OWon' }} humanStone="X"
-      scope="guest" busy={false} onNext={vi.fn()} /></MemoryRouter>);
-    taunts.add(view.container.querySelector('.match-result-taunt')?.textContent ?? '');
-    expect(view.container.querySelector('img')).toHaveAttribute('src', expect.stringContaining('robot'));
+  const taunts = (status: 'XWon' | 'OWon') => new Set([0, 0.17, 0.34, 0.5, 0.67, 0.84, 0.99].map(value => {
+    vi.mocked(Math.random).mockReturnValue(value);
+    const view = render(<MemoryRouter><MatchResult game={{ ...game, status }} humanStone="X" scope="guest" busy={false} onNext={vi.fn()} /></MemoryRouter>);
+    const text = view.container.querySelector('.match-result-taunt')?.textContent ?? '';
     view.unmount();
+    return text.replace(/[“”]/g, '');
+  }));
+  const fresh = ['Còn non lắm, lại đi con gà', 'Kém vậy, chơi hết lực xem nào!', 'Nhường đúng không ní!'];
+  const botWins = taunts('OWon');
+  const humanWins = taunts('XWon');
+  for (const line of fresh) {
+    expect(botWins).toContain(line);
+    expect(humanWins).toContain(line);
   }
-  expect(taunts.size).toBe(3);
+  expect(botWins).toContain('Chơi tiếp không ní, thấy hơi gà');
+  expect(humanWins).toContain('Bot quá gà, chưa đủ tuổi!');
+
+  vi.mocked(Math.random).mockReturnValue(0);
+  const view = renderResult('OWon');
+  const first = view.container.querySelector('.match-result-taunt')?.textContent;
+  vi.mocked(Math.random).mockReturnValue(0.99);
+  view.rerender(<MemoryRouter><MatchResult game={{ ...game, status: 'OWon' }} humanStone="X" scope="guest" busy={false} onNext={vi.fn()} /></MemoryRouter>);
+  expect(view.container.querySelector('.match-result-taunt')?.textContent).toBe(first);
 });
 
 it('plays the tall cutscene on a phone-width board', () => {
   vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: query.includes('max-width'), addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   const view = renderResult();
-  expect(view.video()).toHaveAttribute('src', '/videos/finish/sword-tall.webm');
+  expect(view.video()).toHaveAttribute('src', expect.stringMatching(/sword-tall.*\.webm$/));
 });
 
 it('plays the finish cutscene once per game, even after leaving to replay and coming back', () => {
@@ -120,6 +135,7 @@ it('plays the finish cutscene once per game, even after leaving to replay and co
 it('crossfades from the cutscene into the result card instead of cutting', () => {
   vi.useFakeTimers();
   const view = renderResult();
+  fireEvent.playing(view.video()!);
   expect(view.container.querySelector('.match-result-overlay--cutscene')).toHaveClass('match-result-overlay--entering');
   fireEvent.ended(view.video()!);
   expect(screen.getByRole('region', { name: 'Kết quả ván' })).toBeInTheDocument();
@@ -127,4 +143,21 @@ it('crossfades from the cutscene into the result card instead of cutting', () =>
   expect(screen.queryByRole('button', { name: 'Bỏ qua hoạt cảnh' })).not.toBeInTheDocument();
   act(() => vi.advanceTimersByTime(400));
   expect(view.video()).toBeNull();
+});
+
+it('shows the first frame as poster and opens the cutscene only once the video is really playing', () => {
+  vi.useFakeTimers();
+  const view = renderResult();
+  const overlay = () => view.container.querySelector('.match-result-overlay--cutscene');
+  expect(view.video()).toHaveAttribute('poster', expect.stringMatching(/sword-wide.*\.jpg$/));
+  expect(overlay()).toHaveClass('match-result-overlay--waiting');
+  expect(screen.queryByRole('button', { name: 'Bỏ qua hoạt cảnh' })).not.toBeInTheDocument();
+  fireEvent.playing(view.video()!);
+  expect(overlay()).toHaveClass('match-result-overlay--entering');
+  expect(screen.getByRole('button', { name: 'Bỏ qua hoạt cảnh' })).toBeInTheDocument();
+  view.unmount();
+  localStorage.clear();
+  const slow = renderResult();
+  act(() => vi.advanceTimersByTime(900));
+  expect(slow.container.querySelector('.match-result-overlay--cutscene')).toHaveClass('match-result-overlay--entering');
 });

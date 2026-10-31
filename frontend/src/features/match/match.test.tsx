@@ -41,6 +41,8 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 async function skipCutscene() {
+  // jsdom never plays media; signal playback so the cutscene opens and offers its skip button.
+  fireEvent.playing(await screen.findByLabelText(/Hoạt cảnh kết thúc/));
   fireEvent.click(await screen.findByRole('button', { name: 'Bỏ qua hoạt cảnh' }));
 }
 
