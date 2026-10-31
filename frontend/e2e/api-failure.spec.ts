@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openZoomedBoard } from './fixture';
 import { execFileSync } from 'node:child_process';
 
 test.describe.configure({ timeout: 90_000 });
@@ -34,8 +35,7 @@ test('one browser connection drop offers retry without duplicate X', async ({ pa
     if (!dropped) { dropped = true; return route.abort('failed'); }
     return route.continue();
   });
-  const zoom = page.getByRole('button', { name: 'Phóng bàn cờ' });
-  if (await zoom.isVisible()) await zoom.click();
+  await openZoomedBoard(page);
   await page.getByRole('gridcell', { name: 'Hàng 11, cột 11, ô trống' }).click();
   await expect(page.getByRole('button', { name: 'Thử lại nước đi' })).toBeVisible();
   await page.getByRole('button', { name: 'Thử lại nước đi' }).click();

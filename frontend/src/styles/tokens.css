@@ -7,10 +7,12 @@
   --yellow: #ffd36e;
   --line: #70494c;
   --shadow: #b4c6df;
-  --font-display: 'Courier New', ui-monospace, monospace;
-  --font-body: ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Gomoku Pixel', ui-monospace, monospace;
+  --font-body: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
   color: var(--ink);
   font-family: var(--font-body);
+  /* VT323 has one weight; faux bold smears its pixel edges. */
+  font-synthesis: none;
   font-size: 16px;
   line-height: 1.6;
 }

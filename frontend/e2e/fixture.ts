@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 export const matchId = '821412da-c99d-45be-a7e9-328fb464380b';
 
@@ -7,6 +7,23 @@ export async function openSiteMenu(page: Page) {
   if (await menu.isVisible() && await menu.getAttribute('aria-expanded') === 'false') {
     await menu.click();
   }
+}
+
+// Touch devices open the zoomed board by default; mouse devices start on the overview.
+export async function openZoomedBoard(page: Page) {
+  const zoom = page.getByRole('button', { name: 'Phóng bàn cờ' });
+  const overview = page.getByRole('button', { name: 'Toàn cảnh' });
+  await expect(zoom.or(overview)).toBeVisible();
+  if (await zoom.isVisible()) await zoom.click();
+  await expect(overview).toBeVisible();
+}
+
+export async function showBoardOverview(page: Page) {
+  const zoom = page.getByRole('button', { name: 'Phóng bàn cờ' });
+  const overview = page.getByRole('button', { name: 'Toàn cảnh' });
+  await expect(zoom.or(overview)).toBeVisible();
+  if (await overview.isVisible()) await overview.click();
+  await expect(zoom).toBeVisible();
 }
 
 const gameId = '933412da-c99d-45be-a7e9-328fb464380b';

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation, type Location } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { OwnerIdentity } from '../../shared/api/contracts';
 import { MatchPage } from './MatchPage';
@@ -16,7 +16,14 @@ const oMove = { ...xMove, revision: 2, currentGame: { ...xMove.currentGame, next
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const error = (code: string, status = 409) => json({ code, message: code }, status);
 type FetchHandler = (path: string, init: RequestInit) => Response | Promise<Response>;
-function setup(handler: FetchHandler, id?: string, identity: OwnerIdentity = owner, route = '/') {
+type RouteEntry = string | { pathname: string; search?: string; state?: unknown };
+let currentLocation: Location | undefined;
+function LocationProbe() {
+  const location = useLocation();
+  useEffect(() => { currentLocation = location; }, [location]);
+  return null;
+}
+function setup(handler: FetchHandler, id?: string, identity: OwnerIdentity = owner, route: RouteEntry = '/') {
   const requests: { path: string; init: RequestInit }[] = [];
   vi.stubGlobal('fetch', vi.fn(async (path: string, init: RequestInit) => {
     requests.push({ path, init });
@@ -24,7 +31,7 @@ function setup(handler: FetchHandler, id?: string, identity: OwnerIdentity = own
     return handler(path, init);
   }));
   const query = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={query}><MemoryRouter initialEntries={[route]}><MatchPage scope={identity.scope} identity={identity} matchId={id} /></MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={query}><MemoryRouter initialEntries={[route]}><MatchPage scope={identity.scope} identity={identity} matchId={id} /><LocationProbe /></MemoryRouter></QueryClientProvider>);
   return requests;
 }
 beforeEach(() => {
@@ -185,7 +192,7 @@ it('announces a server-confirmed win, highlights its five cells, and offers the 
   setup(() => json(finished), matchId);
   await skipCutscene();
   const result = await screen.findByRole('region', { name: 'Kết quả ván' });
-  expect(result).toHaveTextContent('Quá Gà, Chưa đủ tuổi!');
+  expect(result).toHaveTextContent('Bạn thắng!');
   expect(result).not.toHaveTextContent('5 quân liên tiếp');
   expect(result.querySelectorAll('[data-winning-cell]')).toHaveLength(0);
   expect(document.querySelectorAll('.gomoku-cell[data-winning-cell]')).toHaveLength(5);
@@ -195,7 +202,7 @@ it('announces a server-confirmed win, highlights its five cells, and offers the 
 });
 
 it.each([
-  ['OWon', 'BOT VICTORY'],
+  ['OWon', 'Bot thắng!'],
   ['Draw', 'Ván hòa'],
 ] as const)('shows a clear %s result from the server', async (status, message) => {
   const finished = { ...base, currentGame: { ...base.currentGame, status, nextStone: null, turnStatus: 'finished' } };
@@ -209,7 +216,7 @@ it('announces human O as winner when the server reports OWon', async () => {
     openingStone: 'O', status: 'OWon', nextStone: null, turnStatus: 'finished' } };
   setup(() => json(finished), matchId);
   await skipCutscene();
-  expect(await screen.findByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Quá Gà, Chưa đủ tuổi!');
+  expect(await screen.findByRole('region', { name: 'Kết quả ván' })).toHaveTextContent('Bạn thắng!');
 });
 
 it('clears the owner snapshot and offers a session action after 401', async () => {
@@ -316,4 +323,73 @@ it('retries an uncertain create with the same command ID', async () => {
     { commandId: 'stable-create-command', humanStone: 'X', humanFirst: true, boardSize: 20, boardColumns: 30 },
   ]);
   expect(requests.filter(({ path }) => path.startsWith('/api/v1/matches/active'))).toHaveLength(1);
+});
+
+it('remembers a newly created match in history state so a reload resumes it', async () => {
+  setup(path => path === '/api/v1/matches?scope=guest' ? json(base, 201) : error('unexpected', 500),
+    undefined, owner, '/play?scope=guest&stone=X&first=true');
+  await screen.findByText('Ván 1');
+  await waitFor(() => expect(currentLocation?.state).toMatchObject({ createdMatchId: matchId }));
+  expect(currentLocation?.search).toBe('?scope=guest&stone=X&first=true');
+});
+
+it('resumes the remembered match after a reload instead of creating another one', async () => {
+  const requests = setup(path => path === `/api/v1/matches/${matchId}?scope=guest` ? json({ ...base, xScore: 1 }) : error('unexpected', 500),
+    undefined, owner, { pathname: '/play', search: '?scope=guest&stone=X&first=true', state: { createdMatchId: matchId } });
+  await screen.findByText('Ván 1');
+  expect(requests.some(({ init }) => init.method === 'POST')).toBe(false);
+  expect(document.querySelector('.versus-intro')).not.toBeInTheDocument();
+});
+
+it('keeps one match when rotating the phone changes the narrow-screen breakpoint', async () => {
+  let narrow = true;
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduced-motion') || (query.includes('max-width') && narrow), media: query,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
+  const requests = setup(path => path === '/api/v1/matches?scope=guest' ? json({ ...base, boardColumns: 20 }, 201)
+    : path.includes('/moves?') ? json(xMove, 202)
+      : path.includes(`/${matchId}`) ? json(oMove) : error('unexpected', 500),
+  undefined, owner, '/play?scope=guest&stone=X&first=true');
+  await screen.findByText('Ván 1');
+  await waitFor(() => expect(document.querySelector('.versus-intro')).not.toBeInTheDocument());
+  narrow = false;
+  fireEvent.click(screen.getByRole('button', { name: 'Phóng bàn cờ' }));
+  fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
+  await waitFor(() => expect(requests.filter(({ path }) => path.includes('/moves?'))).toHaveLength(1));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+  expect(requests.filter(({ path }) => path === '/api/v1/matches?scope=guest')).toHaveLength(1);
+});
+
+it('does not start a second polling loop when focus and visibility fire during a poll', async () => {
+  let gets = 0;
+  setup(path => {
+    if (!path.includes(`/${matchId}`)) return error('unexpected', 500);
+    gets++;
+    return gets === 1 ? json(xMove) : new Promise<Response>(() => {});
+  }, matchId);
+  await screen.findByText('Bot đang suy nghĩ…');
+  await waitFor(() => expect(gets).toBe(2));
+  act(() => {
+    window.dispatchEvent(new Event('focus'));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+  expect(gets).toBe(2);
+});
+
+it('creates and plays a match on an insecure LAN origin where crypto.randomUUID is unavailable', async () => {
+  const realCrypto = globalThis.crypto;
+  vi.stubGlobal('crypto', { getRandomValues: <T extends ArrayBufferView>(array: T) => realCrypto.getRandomValues(array) });
+  const requests = setup(path => path === '/api/v1/matches?scope=guest' ? json(base, 201)
+    : path.includes('/moves?') ? json(oMove) : error('unexpected', 500),
+  undefined, owner, '/play?scope=guest&stone=X&first=true');
+  await screen.findByText('Ván 1');
+  const create = requests.find(({ path }) => path === '/api/v1/matches?scope=guest');
+  expect(JSON.parse(String(create?.init.body)).commandId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+it('shows an error instead of loading forever when match creation fails before any request', async () => {
+  vi.stubGlobal('crypto', {});
+  setup(() => error('unexpected', 500), undefined, owner, '/play?scope=guest&stone=X&first=true');
+  expect(await screen.findByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
+  expect(screen.queryByText('Đang mở ván…')).not.toBeInTheDocument();
 });

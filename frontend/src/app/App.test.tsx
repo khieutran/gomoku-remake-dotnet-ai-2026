@@ -17,7 +17,7 @@ it('offers guest choice without creating a guest on page load', () => {
   const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 }));
   vi.stubGlobal('fetch', fetchSpy);
   renderApp();
-  expect(screen.getByRole('heading', { name: /Thử sức nếu bạn dám, Let's go!/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Thử sức nếu bạn dám!/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Chơi mới' })).toBeInTheDocument();
   expect(fetchSpy.mock.calls.some(([url]) => String(url).endsWith('/guest-sessions'))).toBe(false);
 });

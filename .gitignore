@@ -42,3 +42,7 @@ training/__pycache__/
 training/tests/__pycache__/
 *.onnx
 *.pt
+
+# Android LAN test build
+frontend/.android-lan-shell/
+artifacts/android/

@@ -11,11 +11,15 @@ export function useAiPolling(snapshot: MatchDto | null, refresh: () => Promise<v
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let errors = 0;
+    let inFlight = false;
     const schedule = (delay: number) => { timer = setTimeout(() => void tick(), delay); };
     const tick = async () => {
-      if (stopped || document.visibilityState === 'hidden') return;
+      // focus and visibilitychange both fire on resume; never run two polls at once.
+      if (stopped || inFlight || document.visibilityState === 'hidden') return;
+      inFlight = true;
       try { await refreshRef.current(); errors = 0; }
       catch { errors++; }
+      finally { inFlight = false; }
       if (!stopped && document.visibilityState === 'visible') schedule(errors ? Math.min(10000, 1000 * 2 ** errors) : game?.turnStatus === 'ai_retrying' ? 2000 : 1000);
     };
     const visible = () => {

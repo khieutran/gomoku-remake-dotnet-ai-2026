@@ -1,16 +1,14 @@
 import type { MatchDto } from '../../shared/api/contracts';
 
-export type FinishScene = { src: string; label: string };
+// Rendered by scripts/render-finish-cutscenes.sh: `wide` fits the desktop board, `tall` the phone board.
+export type FinishScene = { wide: string; tall: string; label: string };
+
+const scene = (name: string, label: string): FinishScene =>
+  ({ wide: `/videos/finish/${name}-wide.webm`, tall: `/videos/finish/${name}-tall.webm`, label });
 
 export const finishScenes: Readonly<Record<'human' | 'bot', readonly FinishScene[]>> = {
-  human: [
-    { src: '/videos/finish/frame-sword-v2.webm', label: 'Hiệp sĩ dùng kiếm hạ robot' },
-    { src: '/videos/finish/frame-arrow.webm', label: 'Hiệp sĩ bắn cung hạ robot' },
-  ],
-  bot: [
-    { src: '/videos/finish/frame-fire.webm', label: 'Robot phun lửa vào hiệp sĩ' },
-    { src: '/videos/finish/frame-electric.webm', label: 'Robot biến hiệp sĩ thành gà' },
-  ],
+  human: [scene('sword', 'Hiệp sĩ dùng kiếm hạ robot'), scene('arrow', 'Hiệp sĩ bắn cung hạ robot')],
+  bot: [scene('fire', 'Robot phun lửa vào hiệp sĩ'), scene('electric', 'Robot biến hiệp sĩ thành gà')],
 };
 
 export function pickFinishScene(

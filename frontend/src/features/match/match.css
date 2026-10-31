@@ -12,20 +12,21 @@
 .match-actions .button { width: 100%; }
 .match-board-stage { position: relative; width: min(100%, calc(100dvh - 205px)); min-width: 0; margin-inline: auto; }
 .match-board-stage:has(.gomoku-board--wide) { width: min(100%, calc((100dvh - 205px) * 1.5)); }
-.match-window .window-bar-actions .gomoku-zoom-button { min-height: 44px; margin: 0; padding: 5px 9px; font: 700 .875rem/1.1 system-ui, sans-serif; white-space: nowrap; }
+.match-window .window-bar-actions .gomoku-zoom-button { min-height: 44px; margin: 0; padding: 5px 9px; font: 700 .875rem/1.1 var(--font-body); white-space: nowrap; }
 .replay-board-placeholder { display: grid; place-items: center; aspect-ratio: 1; border: 2px solid var(--line); background: #f4d8af; text-align: center; }
 .replay-actions { display: grid; gap: 10px; }
 .replay-actions .button { width: 100%; }
 .replay-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-weight: 750; }
 .match-result-overlay { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 16px; background: #49303955; }
-.match-result-overlay--cutscene { padding: 0; background: #1c1830ed; overflow: hidden; }
-.match-result-overlay--cutscene video { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; background: #1c1830; }
+.match-result-overlay--cutscene { z-index: 4; padding: 0; background: #4b3f72; overflow: hidden; }
+.match-result-overlay--leaving { pointer-events: none; }
+.match-result-overlay--cutscene video { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; background: #4b3f72; }
 .match-result-skip { position: absolute; right: clamp(8px, 1.5vw, 16px); bottom: clamp(8px, 1.5vw, 16px); z-index: 1; min-height: 44px; }
 .match-result-card { width: min(100%, 370px); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 24px; border: 3px solid var(--line); background: #ffead4; box-shadow: 5px 5px 0 #493039; text-align: center; }
 .match-result-mark { display: inline-block; margin-bottom: 8px; padding: 4px 9px; background: var(--yellow); border: 2px solid var(--line); color: #a62d55; font: 800 1.1rem/1 var(--font-display); letter-spacing: .16em; }
 .match-result-card h2 { margin: 0 0 10px; font: 900 clamp(1.8rem, 4vw, 2.5rem)/1.1 var(--font-display); }
 .match-result-card p { margin: 0 auto 20px; line-height: 1.5; }
-.match-result-robot-icon { display: block; width: 80px; height: 80px; margin: 0 auto 8px; object-fit: contain; image-rendering: pixelated; }
+.match-result-icon { display: block; width: 80px; height: 80px; margin: 0 auto 8px; object-fit: contain; image-rendering: pixelated; }
 .match-result-card--bot h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
 .match-result-card .match-result-taunt { margin-bottom: 10px; color: #a62d55; font-weight: 800; font-size: 1.1rem; line-height: 1.3; }
 .match-result-card .match-result-reason { margin-bottom: 18px; font-size: .9rem; line-height: 1.35; }
@@ -33,9 +34,12 @@
 .match-result-actions .button { flex: 1 1 135px; }
 
 @media (max-width: 700px) {
-  .match-window .window-body { padding: 12px; }
-  .match-board-stage { width: 100%; }
-  .match-board-stage:has(.gomoku-board--wide) { width: 100%; }
+  /* The board area is a size container: the overview stays square and centered, the zoomed board fills it. */
+  .match-window .window-body { padding: 10px; container-type: size; }
+  .match-page { height: 100%; align-items: center; }
+  .match-board-stage, .match-board-stage:has(.gomoku-board--wide) { width: min(100cqw, 100cqh); }
+  .match-board-stage:has(.gomoku-zoom-viewport) { width: 100%; height: 100%; }
+  .match-board-stage .gomoku-zoom-viewport { height: 100cqh; }
   .match-status-panel, .match-score-panel { padding: 0; }
   .game-workspace--match .game-workspace-side > .window .window-body { padding: 8px 12px; }
   .match-status-panel { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -54,7 +58,8 @@
   .match-result-mark { margin-bottom: 4px; font-size: .85rem; }
   .match-result-card h2 { margin-bottom: 5px; font-size: clamp(1.1rem, 5vw, 1.5rem); }
   .match-result-card p { margin-bottom: 9px; font-size: .8rem; line-height: 1.3; }
-  .match-result-robot-icon { width: 50px; height: 50px; margin-bottom: 4px; }
+  .match-result-icon { width: 72px; height: 72px; margin-bottom: 4px; }
+  .match-result-overlay--cutscene video { object-fit: cover; }
   .match-result-card--bot h2 { font-size: clamp(1rem, 4.5vw, 1.4rem); }
   .match-result-card .match-result-taunt { margin-bottom: 6px; font-size: .85rem; }
   .match-result-card .match-result-reason { margin-bottom: 9px; font-size: .75rem; }
@@ -68,11 +73,13 @@
   .game-workspace--match .window-body { padding: 5px 8px; }
 }
 
-@media (max-width: 700px) and (max-height: 720px) {
-  .match-board-stage, .match-board-stage:has(.gomoku-board--wide) { width: min(100%, calc(100dvh - 390px)); }
-}
 
 @media (prefers-reduced-motion: no-preference) {
-  .match-result-card { animation: result-in .24s ease-out both; }
-  @keyframes result-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  /* Board -> cutscene: an iris opens from the board centre; cutscene -> result: the video fades over the card. */
+  .match-result-overlay--entering { animation: cutscene-iris-in .5s cubic-bezier(.2, .8, .2, 1) both; }
+  .match-result-overlay--leaving { animation: cutscene-fade-out .35s ease-in both; }
+  .match-result-card { animation: result-in .32s cubic-bezier(.2, .8, .2, 1) .08s both; }
+  @keyframes cutscene-iris-in { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(75% at 50% 50%); } }
+  @keyframes cutscene-fade-out { from { opacity: 1; } to { opacity: 0; transform: scale(1.03); } }
+  @keyframes result-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 }

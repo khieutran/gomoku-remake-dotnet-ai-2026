@@ -12,7 +12,8 @@ export function Board(props: BoardProps) {
   const container = useRef<HTMLDivElement>(null);
   const restoreZoomFocus = useRef(false);
   const [width, setWidth] = useState(0);
-  const [zoomed, setZoomed] = useState(false);
+  // Touch screens start on the zoomed 44px cells so every new game is playable straight away.
+  const [zoomed, setZoomed] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches);
   useEffect(() => {
     const element = container.current;
     if (!element || props.preview || typeof ResizeObserver === 'undefined') return;
