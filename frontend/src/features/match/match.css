@@ -20,6 +20,7 @@
 .match-result-overlay { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 16px; background: #49303955; }
 .match-result-overlay--cutscene { z-index: 4; padding: 0; background: #4b3f72; overflow: hidden; }
 .match-result-overlay--leaving { pointer-events: none; }
+.match-result-overlay--waiting { opacity: 0; }
 .match-result-overlay--cutscene video { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; background: #4b3f72; }
 .match-result-skip { position: absolute; right: clamp(8px, 1.5vw, 16px); bottom: clamp(8px, 1.5vw, 16px); z-index: 1; min-height: 44px; }
 .match-result-card { width: min(100%, 370px); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 24px; border: 3px solid var(--line); background: #ffead4; box-shadow: 5px 5px 0 #493039; text-align: center; }

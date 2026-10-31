@@ -104,3 +104,22 @@ it('connects a saved match URL to the server board for the signed-in owner', asy
   expect(await screen.findByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).toBeInTheDocument();
   expect(fetcher.mock.calls.some(([url]) => String(url).includes(`/matches/${matchId}?scope=account`))).toBe(true);
 });
+
+it('tells the player on the home screen whether they play with an account or as a guest', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => String(url).endsWith('/auth/me')
+    ? new Response(JSON.stringify({ userId: 'a1b412da-c99d-45be-a7e9-328fb464380b', email: 'kio@example.com', displayName: 'Kiô Trần' }), { status: 200 })
+    : new Response('{}', { status: 404 })));
+  renderApp();
+  expect(await screen.findByText('Kiô Trần')).toBeInTheDocument();
+  expect(screen.getByText(/Tài khoản:/)).toBeInTheDocument();
+});
+
+it('says guest play on the home screen for a guest session', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => String(url).endsWith('/auth/me')
+    ? new Response(JSON.stringify({ code: 'authentication_required', message: 'x' }), { status: 401 })
+    : String(url).endsWith('/guest-sessions/current')
+      ? new Response(JSON.stringify({ guestSessionId: 'b1b412da-c99d-45be-a7e9-328fb464380b' }), { status: 200 })
+      : new Response('{}', { status: 404 })));
+  renderApp();
+  expect(await screen.findByText('Đang chơi khách')).toBeInTheDocument();
+});

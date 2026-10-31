@@ -19,6 +19,26 @@ function width(value: number) {
 }
 
 describe('Board', () => {
+  it('scrolls the zoomed board to a new move that is outside the view, and leaves visible moves alone', () => {
+    const { container, rerender } = render(<ZoomableBoard size={20} moves={moves} interactive />);
+    const viewport = container.querySelector<HTMLElement>('.gomoku-zoom-viewport')!;
+    const scrollTo = vi.fn();
+    viewport.scrollTo = scrollTo;
+    Object.assign(viewport, { scrollLeft: 0, scrollTop: 0 });
+    viewport.getBoundingClientRect = () => ({ left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300 } as DOMRect);
+    const place = (row: number, column: number, rect: Partial<DOMRect>) => {
+      const cell = screen.getByRole('gridcell', { name: new RegExp(`^Hàng ${row + 1}, cột ${column + 1},`) });
+      cell.getBoundingClientRect = () => ({ width: 44, height: 44, ...rect } as DOMRect);
+    };
+    place(15, 15, { left: 660, top: 660, right: 704, bottom: 704 });
+    rerender(<ZoomableBoard size={20} moves={[...moves, { step: 3, row: 15, column: 15, stone: 'O' }]} interactive />);
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ left: 532, top: 532 }));
+    scrollTo.mockClear();
+    place(1, 1, { left: 100, top: 100, right: 144, bottom: 144 });
+    rerender(<ZoomableBoard size={20} moves={[...moves, { step: 3, row: 15, column: 15, stone: 'O' }, { step: 4, row: 1, column: 1, stone: 'X' }]} interactive />);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it('opens on the zoomed 44px board on touch screens, with an overview toggle', () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('coarse'), addEventListener() {}, removeEventListener() {} }));
     render(<Board size={20} moves={moves} interactive />);

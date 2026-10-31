@@ -11,6 +11,7 @@ import { MatchResult } from './MatchResult';
 import { VersusIntro, versusIntroDurationMs } from './VersusIntro';
 import { MatchScorePanel } from '../leaderboard/MatchScorePanel';
 import { useMatchFlow } from './useMatchFlow';
+import { finishFormat, prefetchFinishScenes } from './finishScenes';
 import './match.css';
 
 function createdMatchIdFrom(state: unknown): string | undefined {
@@ -61,6 +62,7 @@ export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scop
     navigate({ pathname: location.pathname, search: location.search, hash: location.hash },
       { replace: true, state: { ...state, createdMatchId: snapshotId } });
   }, [matchId, snapshotId, location, navigate]);
+  useEffect(() => { if (snapshotId) prefetchFinishScenes(finishFormat()); }, [snapshotId]);
   const game = snapshot?.currentGame;
   const gameId = game?.id;
   const gameTurnStatus = game?.turnStatus;

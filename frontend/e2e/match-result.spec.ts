@@ -18,7 +18,7 @@ test('finished game highlights the five stones and shows replay and next game ov
 
   const cutscene = page.locator('.match-result-overlay--cutscene video');
   await expect(cutscene).toBeVisible();
-  await expect(cutscene).toHaveAttribute('src', /\/videos\/finish\/(sword|arrow)-(wide|tall)\.webm$/);
+  await expect(cutscene).toHaveAttribute('src', /(sword|arrow)-(wide|tall)[^/]*\.webm$/);
   await page.getByRole('button', { name: 'Bỏ qua hoạt cảnh' }).click();
   const result = page.getByRole('region', { name: 'Kết quả ván' });
   await expect(result).toContainText('Bạn thắng!');

@@ -35,4 +35,9 @@ public sealed class EfRankingReader(GomokuDbContext db) : IRankingReader
             .OrderByDescending(x => x.RankingPoints).ThenByDescending(x => x.Id)
             .Select(x => new RankingScore(x.Id, x.RankingPoints))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, string>> ReadDisplayNamesAsync(IReadOnlyCollection<Guid> accountIds,
+        CancellationToken cancellationToken = default) =>
+        await db.Users.AsNoTracking().Where(x => accountIds.Contains(x.Id) && x.DisplayName != null)
+            .ToDictionaryAsync(x => x.Id, x => x.DisplayName!, cancellationToken);
 }

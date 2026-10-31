@@ -10,8 +10,32 @@ namespace Gomoku.Api.Identity;
 
 public static class AuthEndpoints
 {
-    private sealed record RegisterRequest(string? Email, string? Password);
+    private sealed record RegisterRequest(string? Email, string? Password, string? DisplayName);
     private sealed record LoginRequest(string? Email, string? Password);
+
+    public const int MinPasswordLength = 8;
+    private const int MaxPasswordLength = 128;
+    private const int MinDisplayNameLength = 2;
+    private const int MaxDisplayNameLength = 24;
+
+    private static object AccountBody(ApplicationUser user) =>
+        new { userId = user.Id, email = user.Email, displayName = user.DisplayName };
+
+    // Collapses inner whitespace; letters (any script), digits, spaces and . _ - are allowed.
+    private static string? NormalizeDisplayName(string value)
+    {
+        var name = string.Join(' ', value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        var allowed = name.All(c => char.IsLetterOrDigit(c) || c is ' ' or '.' or '_' or '-');
+        return allowed && name.Length is >= MinDisplayNameLength and <= MaxDisplayNameLength ? name : null;
+    }
+
+    // Clients that do not send a display name get the email's local part.
+    private static string FallbackDisplayName(string email)
+    {
+        var cleaned = new string(email.Split('@')[0].Where(c => char.IsLetterOrDigit(c) || c is '.' or '_' or '-').ToArray());
+        if (cleaned.Length > MaxDisplayNameLength) cleaned = cleaned[..MaxDisplayNameLength];
+        return NormalizeDisplayName(cleaned) ?? "Người chơi";
+    }
 
     public static void MapAuthEndpoints(this WebApplication app)
     {
@@ -26,20 +50,30 @@ public static class AuthEndpoints
         group.MapPost("/register", async (HttpContext context, RegisterRequest request,
             UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) =>
         {
-            if (string.IsNullOrWhiteSpace(request.Email) ||
-                !new EmailAddressAttribute().IsValid(request.Email) ||
-                string.IsNullOrWhiteSpace(request.Password))
+            // Report every invalid field at once so the form can mark each one.
+            var errors = new List<string>();
+            var email = request.Email?.Trim() ?? "";
+            if (email.Length == 0 || !new EmailAddressAttribute().IsValid(email)) errors.Add("email_invalid");
+            var password = request.Password ?? "";
+            if (password.Length < MinPasswordLength) errors.Add("password_too_short");
+            else if (password.Length > MaxPasswordLength) errors.Add("password_too_long");
+            var displayName = request.DisplayName is null ? null : NormalizeDisplayName(request.DisplayName);
+            if (request.DisplayName is not null && displayName is null) errors.Add("display_name_invalid");
+            if (errors.Count > 0)
             {
                 return ApiErrors.Create(context, StatusCodes.Status400BadRequest,
-                    "validation_error", "Email and password are required.");
+                    "validation_error", "Account details are invalid.", errors.ToArray());
             }
 
-            var email = request.Email.Trim();
-            var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = email, Email = email };
+            var user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(), UserName = email, Email = email,
+                DisplayName = displayName ?? FallbackDisplayName(email),
+            };
             IdentityResult result;
             try
             {
-                result = await users.CreateAsync(user, request.Password);
+                result = await users.CreateAsync(user, password);
             }
             catch (DbUpdateException exception) when (exception.InnerException is PostgresException
             {
@@ -60,8 +94,8 @@ public static class AuthEndpoints
                     result.Errors.Select(x => x.Code).ToArray());
             }
 
-            await signIn.SignInAsync(user, isPersistent: false);
-            return Results.Created("/api/v1/auth/me", new { userId = user.Id, email = user.Email });
+            await signIn.SignInAsync(user, isPersistent: true);
+            return Results.Created("/api/v1/auth/me", AccountBody(user));
         }).RequireRateLimiting(AnonymousRateLimiting.Register);
 
         group.MapPost("/login", async (HttpContext context, LoginRequest request,
@@ -74,15 +108,20 @@ public static class AuthEndpoints
             }
 
             var user = await users.FindByEmailAsync(request.Email.Trim());
-            if (user is null || !(
-                await signIn.PasswordSignInAsync(user, request.Password, isPersistent: false, lockoutOnFailure: true))
-                .Succeeded)
+            var result = user is null ? SignInResult.Failed
+                : await signIn.PasswordSignInAsync(user, request.Password, isPersistent: true, lockoutOnFailure: true);
+            if (result.IsLockedOut)
+            {
+                return ApiErrors.Create(context, StatusCodes.Status423Locked,
+                    "account_locked", "Too many failed sign-ins. Try again in a few minutes.");
+            }
+            if (!result.Succeeded)
             {
                 return ApiErrors.Create(context, StatusCodes.Status401Unauthorized,
                     "invalid_credentials", "Invalid email or password.");
             }
 
-            return Results.Ok(new { userId = user.Id, email = user.Email });
+            return Results.Ok(AccountBody(user!));
         }).RequireRateLimiting(AnonymousRateLimiting.Login);
 
         group.MapPost("/logout", async (SignInManager<ApplicationUser> signIn) =>
@@ -97,7 +136,7 @@ public static class AuthEndpoints
             return user is null
                 ? ApiErrors.Create(context, StatusCodes.Status401Unauthorized,
                     "authentication_required", "Sign in to access this account.")
-                : Results.Ok(new { userId = user.Id, email = user.Email });
+                : Results.Ok(AccountBody(user));
         });
     }
 }

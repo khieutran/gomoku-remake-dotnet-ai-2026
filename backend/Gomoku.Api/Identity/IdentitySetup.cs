@@ -16,7 +16,16 @@ public static class IdentitySetup
             ?? throw new InvalidOperationException("ConnectionStrings:Gomoku is required.");
         builder.Services.AddDbContext<GomokuDbContext>(options => options.UseNpgsql(connectionString));
         builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
-            options.User.RequireUniqueEmail = true)
+        {
+            options.User.RequireUniqueEmail = true;
+            // Accounts only guard a leaderboard spot: length matters, forced character classes do not.
+            options.Password.RequiredLength = AuthEndpoints.MinPasswordLength;
+            options.Password.RequireDigit = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequiredUniqueChars = 1;
+        })
             .AddEntityFrameworkStores<GomokuDbContext>()
             .AddDefaultTokenProviders();
         builder.Services.AddAuthorization();
@@ -28,7 +37,9 @@ public static class IdentitySetup
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
                 ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
-            options.ExpireTimeSpan = TimeSpan.FromDays(7);
+            // Persistent sign-in like other games: 30 days, renewed while the player keeps coming back.
+            options.ExpireTimeSpan = TimeSpan.FromDays(30);
+            options.SlidingExpiration = true;
             options.Events.OnRedirectToLogin = context =>
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;

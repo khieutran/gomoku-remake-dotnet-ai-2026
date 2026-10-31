@@ -67,7 +67,6 @@ p { max-width: 65ch; margin: 0 0 1rem; }
 .auth-password-field input { padding-right: 52px; }
 .auth-password-toggle { position: absolute; top: 50%; right: 2px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; transform: translateY(-50%); border: 0; background: transparent; color: var(--ink); cursor: pointer; }
 .auth-password-toggle:focus-visible { outline: 3px solid #246d73; outline-offset: -3px; }
-.auth-password-hint { margin: -8px 0 0; font-size: .875rem; line-height: 1.4; }
 .entry-stones { display: flex; gap: 24px; font: 900 4rem/1 var(--font-display); padding-bottom: 24px; }
 .entry-stones span:first-child { color: #a42a54; }
 .entry-stones span:last-child { color: #246d73; }
@@ -107,3 +106,14 @@ p { max-width: 65ch; margin: 0 0 1rem; }
   .entry-board-stage { width: 100%; height: calc(100cqh - 3rem); aspect-ratio: auto; overflow: hidden; }
   .entry-board-stage > .gomoku-board { position: absolute; left: 50%; top: 50%; width: max(100cqw, calc(100cqh - 3rem)); transform: translate(-50%, -50%); }
 }
+
+/* Home: who is playing. */
+.start-identity { margin: 0; justify-self: center; padding: 3px 10px; border: 2px solid #fff6e866; color: #fff6e8; font-size: .9rem; }
+.start-identity strong { color: var(--yellow); }
+.start-identity--account { border-color: var(--yellow); }
+/* Auth forms: hint and error sit right under their field. */
+.auth-field { display: grid; gap: 6px; }
+.auth-hint { margin: 0; font-size: .875rem; color: #6b5058; }
+.auth-field-error { margin: 0; color: #a62d55; font-size: .9rem; font-weight: 700; }
+.auth-form input[aria-invalid="true"] { border-color: #a62d55; box-shadow: 0 0 0 2px #a62d5533; }
+.auth-form-error { margin: 0; padding: 8px 10px; border: 2px solid #a62d55; background: #ffe1e6; color: #7d1f3f; font-weight: 700; }

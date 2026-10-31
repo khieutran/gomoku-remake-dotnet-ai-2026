@@ -1,13 +1,13 @@
 import { createContext, useContext } from 'react';
 
-export type Session = { scope: 'account'; ownerId: string; email?: string } | { scope: 'guest'; ownerId: string } | { scope: 'none' };
+export type Session = { scope: 'account'; ownerId: string; email?: string; displayName?: string | null } | { scope: 'guest'; ownerId: string } | { scope: 'none' };
 export type SessionContextValue = {
   session: Session;
   ready: boolean;
   error: string | null;
   chooseGuest: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   requireAccount: () => Promise<void>;
 };
