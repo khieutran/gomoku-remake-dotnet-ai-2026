@@ -7,6 +7,7 @@ test('lost account cookie hides its match until the same account signs in again'
   const email = `phase4-recovery-${crypto.randomUUID()}@example.test`;
   const password = `P4-${crypto.randomUUID()}!`;
   await page.goto('/register');
+  await page.getByLabel('Tên hiển thị').fill('Người thử');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng ký' }).click();
@@ -45,6 +46,7 @@ test('account scope cannot read a guest-owned match', async ({ page }) => {
   expect(guestId).toBeTruthy();
   const email = `phase4-owner-${crypto.randomUUID()}@example.test`;
   await page.goto('/register');
+  await page.getByLabel('Tên hiển thị').fill('Người thử');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(`P4-${crypto.randomUUID()}!`);
   await page.getByRole('button', { name: 'Đăng ký' }).click();

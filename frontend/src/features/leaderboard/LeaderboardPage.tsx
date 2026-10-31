@@ -36,7 +36,7 @@ export function LeaderboardPage() {
           <thead><tr><th scope="col">Hạng</th><th scope="col">Tài khoản</th><th scope="col">Điểm</th></tr></thead>
           <tbody>{top.data.items.map(entry => <tr key={entry.accountId} className={`leaderboard-row leaderboard-row--${entry.rank <= 3 ? ['first', 'second', 'third'][entry.rank - 1] : 'standard'}`}>
             <td><span className="leaderboard-rank" aria-label={`Hạng ${entry.rank}`}>{entry.rank}</span></td>
-            <td><span className="leaderboard-player">{isAccount && entry.accountId === session.ownerId ? 'Bạn' : `Người chơi ${entry.accountId.slice(0, 8)}`}</span><span className="sr-only">{entry.accountId}</span>{entry.rank <= 3 && <small className="leaderboard-rank-name">{rankName(entry.rank)}</small>}</td>
+            <td><span className="leaderboard-player">{entry.displayName ?? `Người chơi ${entry.accountId.slice(0, 8)}`}{isAccount && entry.accountId === session.ownerId && ' (Bạn)'}</span><span className="sr-only">{entry.accountId}</span>{entry.rank <= 3 && <small className="leaderboard-rank-name">{rankName(entry.rank)}</small>}</td>
             <td className="leaderboard-points">{entry.points}<small>điểm</small></td>
           </tr>)}</tbody>
         </table></div>)}

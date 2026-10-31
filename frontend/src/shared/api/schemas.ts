@@ -32,9 +32,9 @@ export const activeMatchPageSchema = z.object({
   items: z.array(z.object({ matchId: id, gameId: id, revision: integer, updatedAt: timestamp })),
   nextCursor: z.string().nullable(),
 })
-export const accountSchema = z.object({ userId: id, email: z.string() })
+export const accountSchema = z.object({ userId: id, email: z.string(), displayName: z.string().nullish() })
 export const guestSessionSchema = z.object({ guestSessionId: id, expiresAt: timestamp.optional() })
-export const rankingEntrySchema = z.object({ accountId: id, points: integer, rank: z.number().int().positive() })
+export const rankingEntrySchema = z.object({ accountId: id, points: integer, rank: z.number().int().positive(), displayName: z.string().nullish() })
 export const rankingPageSchema = z.object({ items: z.array(rankingEntrySchema) })
 export const rankingPositionSchema = rankingEntrySchema.extend({ rank: z.number().int().positive().nullable() })
 export const csrfSchema = z.object({ requestToken: z.string().min(1) })

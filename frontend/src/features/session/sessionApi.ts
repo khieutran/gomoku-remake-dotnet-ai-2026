@@ -6,6 +6,6 @@ export const sessionApi = {
   currentGuest: (signal?: AbortSignal) => apiGet('/guest-sessions/current', guestSessionSchema, signal),
   guest: () => apiPost('/guest-sessions', {}, guestSessionSchema),
   login: (email: string, password: string) => apiPost('/auth/login', { email, password }, accountSchema),
-  register: (email: string, password: string) => apiPost('/auth/register', { email, password }, accountSchema),
+  register: (email: string, password: string, displayName: string) => apiPost('/auth/register', { email, password, displayName }, accountSchema),
   logout: () => apiPost('/auth/logout', {}, noContentSchema),
 };

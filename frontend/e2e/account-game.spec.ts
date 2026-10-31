@@ -7,10 +7,17 @@ test('account can log out and log back in to its saved match', async ({ page }) 
   const email = `phase4-${crypto.randomUUID()}@example.test`;
   const password = `P4-${crypto.randomUUID()}!`;
   await page.goto('/register');
+  await page.getByLabel('Tên hiển thị').fill('Người thử');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng ký' }).click();
   await expect(page.locator('#site-navigation .nav-action')).toHaveText('Đăng xuất');
+  // A persistent cookie keeps the account signed in after the app or browser closes.
+  const auth = (await page.context().cookies()).find(cookie => cookie.name === 'gomoku.auth');
+  expect(auth?.expires).toBeGreaterThan(Date.now() / 1000 + 29 * 24 * 3600);
+  await page.goto('/');
+  await expect(page.getByText(/^Tài khoản:/)).toBeVisible();
+  await expect(page.getByText('Người thử')).toBeVisible();
   await openSiteMenu(page);
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await page.goto('/play?scope=account');
