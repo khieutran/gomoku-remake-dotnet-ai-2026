@@ -1,0 +1,37 @@
+# Public access through a Cloudflare Tunnel while this machine runs the stack (no router port needed).
+# Put these in .env (gitignored):
+#   GOMOKU_PUBLIC_HOST=gomoku.example.com      # the tunnel's public hostname
+#   CLOUDFLARE_TUNNEL_TOKEN=eyJ...             # from Zero Trust > Networks > Tunnels
+# Start:  docker compose -f compose.yaml -f compose.tunnel.yaml up -d --build
+# In the tunnel's Public Hostname settings, point the hostname at:  http://api:8080
+services:
+  api:
+    environment:
+      # Public traffic: no Development error pages, Secure cookies (the tunnel serves HTTPS).
+      ASPNETCORE_ENVIRONMENT: Production
+      # 127.0.0.1 keeps the container healthcheck allowed.
+      AllowedHosts: "${GOMOKU_PUBLIC_HOST:?set GOMOKU_PUBLIC_HOST in .env};127.0.0.1;localhost"
+      # Trust X-Forwarded-For only from cloudflared, so rate limits see each player's real IP.
+      RateLimiting__KnownProxies__0: 172.30.66.10
+    networks:
+      - default
+      - tunnel
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      tunnel:
+        ipv4_address: 172.30.66.10
+
+networks:
+  tunnel:
+    ipam:
+      config:
+        - subnet: 172.30.66.0/24
