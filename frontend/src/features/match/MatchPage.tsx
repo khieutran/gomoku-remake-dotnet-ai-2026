@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { OwnerIdentity, OwnerScope } from '../../shared/api/contracts';
 import { Window } from '../../shared/ui/Window';
 import { GameWorkspace } from '../../shared/ui/GameWorkspace';
@@ -13,25 +13,40 @@ import { MatchScorePanel } from '../leaderboard/MatchScorePanel';
 import { useMatchFlow } from './useMatchFlow';
 import './match.css';
 
+function createdMatchIdFrom(state: unknown): string | undefined {
+  const value = (state as { createdMatchId?: unknown } | null)?.createdMatchId;
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scope: OwnerScope; matchId?: string; identity?: OwnerIdentity }) {
   const [params] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // A reload keeps history state, so a match created from setup params resumes instead of being recreated.
+  const [resumeId] = useState(() => matchId ? undefined : createdMatchIdFrom(location.state));
+  const resolvedMatchId = matchId ?? resumeId;
   const [boardHeaderActions, setBoardHeaderActions] = useState<HTMLDivElement | null>(null);
   const stone = params.get('stone');
   const first = params.get('first');
   const defaultSize = 20;
-  const defaultColumns = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 700px)').matches ? 20 : 30;
+  // Frozen on mount: rotating a phone across the breakpoint must not change the setup and create another match.
+  const [defaultColumns] = useState<20 | 30>(() => {
+    const requested = params.get('boardColumns');
+    if (requested === '20' || requested === '30') return Number(requested) as 20 | 30;
+    return typeof window !== 'undefined' && window.matchMedia?.('(max-width: 700px)').matches ? 20 : 30;
+  });
   const setup = !matchId && (stone === 'X' || stone === 'O') && (first === 'true' || first === 'false')
     ? { humanStone: stone as 'X' | 'O', humanFirst: first === 'true',
-      boardSize: defaultSize as 20, boardColumns: defaultColumns as 20 | 30 } : undefined;
+      boardSize: defaultSize as 20, boardColumns: defaultColumns } : undefined;
   const session = useContext(SessionContext);
   const notifiedSession = useRef(false);
   const identity = suppliedIdentity ?? (session?.session.scope === scope ? { scope, ownerId: session.session.ownerId } : null);
-  const flow = useMatchFlow(identity, matchId, setup,
+  const flow = useMatchFlow(identity, resolvedMatchId, setup,
     { humanStone: 'X', humanFirst: true, boardSize: defaultSize, boardColumns: defaultColumns });
   const snapshot = flow.snapshot;
   const snapshotId = snapshot?.matchId;
   const [introDoneFor, setIntroDoneFor] = useState<string | null>(null);
-  const introVisible = !matchId && snapshotId !== undefined && introDoneFor !== snapshotId;
+  const introVisible = !resolvedMatchId && snapshotId !== undefined && introDoneFor !== snapshotId;
   useEffect(() => {
     if (!introVisible || !snapshotId) return;
     const reducedMotion = typeof window.matchMedia === 'function' &&
@@ -40,6 +55,12 @@ export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scop
       reducedMotion ? 0 : versusIntroDurationMs);
     return () => window.clearTimeout(timer);
   }, [introVisible, snapshotId]);
+  useEffect(() => {
+    if (matchId || !snapshotId || createdMatchIdFrom(location.state) === snapshotId) return;
+    const state = typeof location.state === 'object' && location.state !== null ? location.state : {};
+    navigate({ pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: { ...state, createdMatchId: snapshotId } });
+  }, [matchId, snapshotId, location, navigate]);
   const game = snapshot?.currentGame;
   const gameId = game?.id;
   const gameTurnStatus = game?.turnStatus;
@@ -59,7 +80,7 @@ export function MatchPage({ scope, matchId, identity: suppliedIdentity }: { scop
     if (!flow.unauthorized) notifiedSession.current = false;
   }, [flow.unauthorized, scope, session]);
   if (flow.loading) return <GameWorkspace variant="match"
-    main={<Window title="Ván đấu" className="workspace-main-window match-window" headerActionsRef={setBoardHeaderActions}><h1 className="sr-only" tabIndex={-1}>Đấu với bot</h1><section className="match-page" aria-label="Bàn chơi"><div className="match-board-stage"><Board size={setup?.boardSize ?? defaultSize} columns={setup?.boardColumns ?? defaultColumns} moves={[]} interactive={false} zoomControlTarget={boardHeaderActions} />{!matchId && <VersusIntro playing={false} />}{matchId && <div className="match-result-overlay"><p role="status">Đang tải ván đấu…</p></div>}</div></section></Window>}
+    main={<Window title="Ván đấu" className="workspace-main-window match-window" headerActionsRef={setBoardHeaderActions}><h1 className="sr-only" tabIndex={-1}>Đấu với bot</h1><section className="match-page" aria-label="Bàn chơi"><div className="match-board-stage"><Board size={setup?.boardSize ?? defaultSize} columns={setup?.boardColumns ?? defaultColumns} moves={[]} interactive={false} zoomControlTarget={boardHeaderActions} />{!resolvedMatchId && <VersusIntro playing={false} />}{resolvedMatchId && <div className="match-result-overlay"><p role="status">Đang tải ván đấu…</p></div>}</div></section></Window>}
     top={<Window title="Trạng thái"><p>Đang mở ván…</p></Window>}
     bottom={<Window title="Bảng điểm"><p>Đang tải điểm trận…</p></Window>}
   />;

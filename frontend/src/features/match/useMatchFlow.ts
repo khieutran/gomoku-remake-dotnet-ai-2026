@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { MatchDto, MatchSetup, NextGameCommand, OwnerIdentity, PlayMoveCommand } from '../../shared/api/contracts';
 import { queryKeys } from '../../shared/api/queryKeys';
 import { ApiError } from '../../shared/api/errors';
+import { newCommandId } from '../../shared/api/commandId';
 import { matchApi } from './matchApi';
 import { useAiPolling } from './useAiPolling';
 
@@ -71,6 +72,10 @@ export function useMatchFlow(identity: OwnerIdentity | null, id?: string, setup?
     });
     if (!identity) { queueMicrotask(() => { if (run === generation.current) setLoading(false); }); return; }
     const boot = async () => {
+      // Let the queued state reset above run first; otherwise an error thrown before the first
+      // await is overwritten by it and the page stays on "Đang mở ván…" forever.
+      await Promise.resolve();
+      if (run !== generation.current) return;
       try {
         let data: MatchDto;
         if (id) data = await matchApi.getMatch(identity.scope, id);
@@ -81,7 +86,7 @@ export function useMatchFlow(identity: OwnerIdentity | null, id?: string, setup?
           else {
             let attempt = createAttempt.current;
             if (!attempt || attempt.ownerKey !== ownerKey || attempt.setupKey !== setupKey) {
-              const commandId = crypto.randomUUID();
+              const commandId = newCommandId();
               attempt = { ownerKey, setupKey, commandId, promise: matchApi.createMatch(identity.scope, commandId, creationSetup) };
               createAttempt.current = attempt;
             }
@@ -144,7 +149,7 @@ export function useMatchFlow(identity: OwnerIdentity | null, id?: string, setup?
   const play = useCallback((row: number, column: number) => {
     const data = current.current;
     if (!identity || !data || lock.current || command.current || data.currentGame.turnStatus !== 'human' || data.currentGame.moves.some(move => move.row === row && move.column === column)) return;
-    const body = { commandId: crypto.randomUUID(), row, column, expectedRevision: data.revision };
+    const body = { commandId: newCommandId(), row, column, expectedRevision: data.revision };
     command.current = { kind: 'move', matchId: data.matchId, body };
     setPendingMove({ step: data.currentGame.moves.length + 1, row, column, stone: data.humanStone });
     void execute(command.current);
@@ -152,7 +157,7 @@ export function useMatchFlow(identity: OwnerIdentity | null, id?: string, setup?
   const nextGame = useCallback(() => {
     const data = current.current;
     if (!identity || !data || lock.current || command.current || data.currentGame.turnStatus !== 'finished') return;
-    command.current = { kind: 'next', matchId: data.matchId, body: { commandId: crypto.randomUUID(), expectedRevision: data.revision } };
+    command.current = { kind: 'next', matchId: data.matchId, body: { commandId: newCommandId(), expectedRevision: data.revision } };
     void execute(command.current);
   }, [identity, execute]);
   const recover = useCallback(() => {
