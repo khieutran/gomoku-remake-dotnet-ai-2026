@@ -89,6 +89,10 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -350,10 +354,10 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("BoardSize")
+                    b.Property<int?>("BoardColumns")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("BoardColumns")
+                    b.Property<int>("BoardSize")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -404,9 +408,9 @@ namespace Gomoku.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Matches", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Match_BoardSize", "\"BoardSize\" > 0");
-
                             t.HasCheckConstraint("CK_Match_BoardColumns", "\"BoardColumns\" IS NULL OR \"BoardColumns\" > 0");
+
+                            t.HasCheckConstraint("CK_Match_BoardSize", "\"BoardSize\" > 0");
 
                             t.HasCheckConstraint("CK_Match_HumanStone", "\"HumanStone\" IN ('X', 'O')");
 

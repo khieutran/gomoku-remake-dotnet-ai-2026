@@ -367,4 +367,88 @@ public sealed class IdentityHttpTests
         Assert.DoesNotContain(response.Headers, header => header.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase)
             && header.Value.Any(value => value.StartsWith("gomoku.guest=")));
     }
+
+    [Fact]
+    public async Task RegisterStoresDisplayNameAndKeepsTheSignInAcrossBrowserRestarts()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        var email = $"task-dn-{Guid.NewGuid():N}@example.test";
+        using var register = await PostAsync(client, "/api/v1/auth/register",
+            new { email, password = "matkhau8", displayName = "  Kiô   Trần  " });
+        Assert.Equal(HttpStatusCode.Created, register.StatusCode);
+        Assert.Equal("Kiô Trần", (await register.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("displayName").GetString());
+        var authCookie = register.Headers.GetValues("Set-Cookie").Single(value => value.StartsWith("gomoku.auth="));
+        var expires = DateTimeOffset.Parse(authCookie.Split(';').Select(part => part.Trim())
+            .Single(part => part.StartsWith("expires=", StringComparison.OrdinalIgnoreCase))["expires=".Length..]);
+        Assert.InRange(expires - DateTimeOffset.UtcNow, TimeSpan.FromDays(29), TimeSpan.FromDays(31));
+        var me = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/me");
+        Assert.Equal("Kiô Trần", me.GetProperty("displayName").GetString());
+
+        using var login = await PostAsync(client, "/api/v1/auth/login", new { email, password = "matkhau8" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        Assert.Equal("Kiô Trần", (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("displayName").GetString());
+        Assert.Contains(login.Headers.GetValues("Set-Cookie"), value =>
+            value.StartsWith("gomoku.auth=") && value.Contains("expires=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task PasswordOnlyNeedsEightCharacters()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var accepted = await PostAsync(client, "/api/v1/auth/register",
+            new { email = $"task-pw-{Guid.NewGuid():N}@example.test", password = "abcdefgh", displayName = "Lan" });
+        Assert.Equal(HttpStatusCode.Created, accepted.StatusCode);
+        using var tooShort = await PostAsync(client, "/api/v1/auth/register",
+            new { email = $"task-pw-{Guid.NewGuid():N}@example.test", password = "abcdefg", displayName = "Lan" });
+        Assert.Equal(HttpStatusCode.BadRequest, tooShort.StatusCode);
+        var error = await tooShort.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains("password_too_short", error.GetProperty("errors").EnumerateArray().Select(x => x.GetString()));
+    }
+
+    [Fact]
+    public async Task RegistrationReportsEachInvalidFieldByCode()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var response = await PostAsync(client, "/api/v1/auth/register",
+            new { email = "not-an-email", password = "short", displayName = "x" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_error", error.GetProperty("code").GetString());
+        var codes = error.GetProperty("errors").EnumerateArray().Select(x => x.GetString()).ToArray();
+        Assert.Contains("email_invalid", codes);
+        Assert.Contains("password_too_short", codes);
+        Assert.Contains("display_name_invalid", codes);
+    }
+
+    [Fact]
+    public async Task MissingDisplayNameFallsBackToTheEmailName()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        using var register = await PostAsync(client, "/api/v1/auth/register",
+            new { email = $"lan-{Guid.NewGuid():N}@example.test", password = "StrongPass!123" });
+        Assert.Equal(HttpStatusCode.Created, register.StatusCode);
+        var displayName = (await register.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("displayName").GetString();
+        Assert.StartsWith("lan-", displayName);
+        Assert.True(displayName!.Length <= 24);
+    }
+
+    [Fact]
+    public async Task RepeatedWrongPasswordsLockTheAccountWithItsOwnError()
+    {
+        using var factory = OpenFactory();
+        using var client = factory.CreateClient();
+        var email = $"task-lock-{Guid.NewGuid():N}@example.test";
+        using (var register = await PostAsync(client, "/api/v1/auth/register", new { email, password = "matkhau8", displayName = "Lock" }))
+            Assert.Equal(HttpStatusCode.Created, register.StatusCode);
+        using (await PostAsync(client, "/api/v1/auth/logout")) { }
+        for (var attempt = 0; attempt < 5; attempt++)
+            using (await PostAsync(client, "/api/v1/auth/login", new { email, password = "wrongpass" })) { }
+        using var locked = await PostAsync(client, "/api/v1/auth/login", new { email, password = "matkhau8" });
+        Assert.Equal(HttpStatusCode.Locked, locked.StatusCode);
+        Assert.Equal("account_locked", (await locked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+    }
 }

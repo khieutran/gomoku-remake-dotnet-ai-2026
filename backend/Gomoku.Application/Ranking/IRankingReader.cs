@@ -8,4 +8,6 @@ public interface IRankingReader
     Task<RankingPosition?> ReadPositionAsync(Guid accountId,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RankingScore>> ReadAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, string>> ReadDisplayNamesAsync(IReadOnlyCollection<Guid> accountIds,
+        CancellationToken cancellationToken = default);
 }

@@ -135,6 +135,9 @@ public sealed class RankingProjectionWorkerTests
         public Task<RankingPosition?> ReadPositionAsync(Guid accountId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<RankingPosition?>(null);
+        public Task<IReadOnlyDictionary<Guid, string>> ReadDisplayNamesAsync(IReadOnlyCollection<Guid> accountIds,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, string>>(new Dictionary<Guid, string>());
     }
 
     private sealed class ToggleProjection : IRankingProjection

@@ -22,6 +22,7 @@ public sealed class GomokuDbContext(DbContextOptions<GomokuDbContext> options)
 
         builder.Entity<ApplicationUser>(user =>
         {
+            user.Property(x => x.DisplayName).HasMaxLength(24);
             user.Property(x => x.HistoryRevision).HasDefaultValue(0);
             user.Property(x => x.RankingPoints).HasDefaultValue(0);
             user.Property(x => x.RankingGames).HasDefaultValue(0);

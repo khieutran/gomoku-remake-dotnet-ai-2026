@@ -26,6 +26,14 @@ public sealed class RankingServiceTests
     }
 
     [Fact]
+    public async Task LeaderboardEntriesCarryDisplayNames()
+    {
+        var service = new RankingService(new Reader(pending: true), new Projection());
+
+        Assert.Equal("Kiô", Assert.Single((await service.TopAsync(20)).Items).DisplayName);
+    }
+
+    [Fact]
     public async Task EqualScoresShareRankAndNextRankSkipsPositions()
     {
         var scores = new RankingScore[]
@@ -51,6 +59,9 @@ public sealed class RankingServiceTests
         public Task<IReadOnlyList<RankingScore>> ReadAllAsync(
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<RankingScore>>([new(AccountId, 3)]);
+        public Task<IReadOnlyDictionary<Guid, string>> ReadDisplayNamesAsync(IReadOnlyCollection<Guid> accountIds,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, string>>(new Dictionary<Guid, string> { [AccountId] = "Kiô" });
     }
 
     private sealed class Projection : IRankingProjection
