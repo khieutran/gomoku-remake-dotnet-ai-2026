@@ -5,7 +5,13 @@
 # Start:  docker compose -f compose.yaml -f compose.tunnel.yaml up -d --build
 # In the tunnel's Public Hostname settings, point the hostname at:  http://api:8080
 services:
+  # Come back by themselves after a host reboot (the base compose file is tuned for local development).
+  postgres:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
   api:
+    restart: unless-stopped
     environment:
       # Public traffic: no Development error pages, Secure cookies (the tunnel serves HTTPS).
       ASPNETCORE_ENVIRONMENT: Production
