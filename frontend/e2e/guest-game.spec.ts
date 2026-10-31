@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openZoomedBoard } from './fixture';
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -6,8 +7,7 @@ test('guest move survives a deep-link reload and remains in active history', asy
   await page.goto('/play?scope=guest');
   await page.getByRole('button', { name: 'Bắt đầu chơi khách' }).click();
   await expect(page.getByRole('heading', { name: 'Ván 1' })).toBeVisible();
-  const zoom = page.getByRole('button', { name: 'Phóng bàn cờ' });
-  if (await zoom.isVisible()) await zoom.click();
+  await openZoomedBoard(page);
   await page.getByRole('gridcell', { name: 'Hàng 11, cột 11, ô trống' }).dblclick();
   await expect(page.getByRole('gridcell', { name: 'Hàng 11, cột 11, quân X' })).toBeVisible();
   await expect(page.getByRole('gridcell', { name: /quân O/ }).first()).toBeVisible({ timeout: 30_000 });

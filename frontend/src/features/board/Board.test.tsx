@@ -19,6 +19,17 @@ function width(value: number) {
 }
 
 describe('Board', () => {
+  it('opens on the zoomed 44px board on touch screens, with an overview toggle', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('coarse'), addEventListener() {}, removeEventListener() {} }));
+    render(<Board size={20} moves={moves} interactive />);
+    width(360);
+    expect(screen.getByRole('region', { name: 'Bàn cờ phóng to, cuộn để di chuyển' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Toàn cảnh' }));
+    expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toBeInTheDocument();
+    vi.unstubAllGlobals();
+    vi.stubGlobal('ResizeObserver', Observer);
+  });
+
   it('renders all 400 cells, text stones and the latest move', () => {
     render(<Board size={20} moves={moves} interactive />);
     expect(screen.getAllByRole('gridcell')).toHaveLength(400);

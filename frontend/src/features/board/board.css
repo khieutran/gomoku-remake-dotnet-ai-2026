@@ -1,7 +1,7 @@
 .gomoku-board { width: 100%; min-width: 0; }
 .gomoku-grid { display: grid; grid-template-rows: repeat(var(--board-rows), minmax(0, 1fr)); width: 100%; aspect-ratio: var(--board-columns) / var(--board-rows); border: 2px solid #70494c; background: #f4d8af; box-sizing: border-box; }
 .gomoku-row { display: grid; grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr)); min-height: 0; }
-.gomoku-cell { display: grid; place-items: center; position: relative; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-right: 1px solid #b88c72; border-bottom: 1px solid #b88c72; border-radius: 0; background: transparent; color: #493039; font: 900 clamp(16px, 2.3vw, 25px)/1 'Courier New', monospace; touch-action: manipulation; }
+.gomoku-cell { display: grid; place-items: center; position: relative; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-right: 1px solid #b88c72; border-bottom: 1px solid #b88c72; border-radius: 0; background: transparent; color: #493039; font: 400 clamp(16px, 2.3vw, 25px)/1 var(--font-display); touch-action: manipulation; }
 button.gomoku-cell { cursor: pointer; }
 button.gomoku-cell[aria-disabled="true"] { cursor: default; }
 .gomoku-cell--x { color: #a62d55; }

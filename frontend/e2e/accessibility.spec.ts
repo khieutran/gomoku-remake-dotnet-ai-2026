@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { mockGuestMatch } from './fixture';
+import { mockGuestMatch, showBoardOverview } from './fixture';
 
 test('keyboard opens board, moves focus, and activates one labeled cell', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const moves = await mockGuestMatch(page);
+  await showBoardOverview(page);
   const zoom = page.getByRole('button', { name: 'Phóng bàn cờ' });
   await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
@@ -24,6 +25,7 @@ test('reduced motion disables decorative motion and focus remains visible', asyn
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });
   await mockGuestMatch(page);
+  await showBoardOverview(page);
   const zoom = page.getByRole('button', { name: 'Phóng bàn cờ' });
   await page.keyboard.press('Tab');
   await zoom.focus();

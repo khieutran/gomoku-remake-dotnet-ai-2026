@@ -50,7 +50,7 @@ function EntryPage() {
         <EntryBoard columns={boardColumns} />
         <section className="start-board-overlay" aria-label="Chọn cách chơi">
           <div className="start-menu">
-            <h1 tabIndex={-1}>{step === 'choice' ? "Thử sức nếu bạn dám, Let's go!" : step === 'identity' ? 'Chọn cách chơi' : 'Sẵn sàng vào trận'}</h1>
+            <h1 tabIndex={-1}>{step === 'choice' ? 'Thử sức nếu bạn dám!' : step === 'identity' ? 'Chọn cách chơi' : 'Sẵn sàng vào trận'}</h1>
             {step === 'choice' && <div className="entry-actions">
               {session.scope !== 'none' && <Link className="button button-primary" to={`/play?scope=${session.scope}`}>Chơi tiếp</Link>}
               <button type="button" className={`button${session.scope === 'none' ? ' button-primary' : ''}`} onClick={() => setStep('identity')}>Chơi mới</button>

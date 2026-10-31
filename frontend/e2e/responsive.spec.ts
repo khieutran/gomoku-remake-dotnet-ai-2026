@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockGuestMatch } from './fixture';
+import { mockGuestMatch, openZoomedBoard } from './fixture';
 
 test('start menu and board fit one viewport on desktop and mobile', async ({ page, isMobile }) => {
   await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
@@ -42,7 +42,9 @@ test('mobile keeps the board above status and actions without page overflow', as
   await mockGuestMatch(page);
   const status = await page.getByRole('region', { name: 'Trạng thái ván đấu' }).boundingBox();
   const score = await page.getByRole('region', { name: 'Điểm trận' }).boundingBox();
-  const board = await page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' }).boundingBox();
+  // On touch screens the zoomed viewport is the visible board; the grid inside it scrolls.
+  const zoomed = page.getByRole('region', { name: 'Bàn cờ phóng to, cuộn để di chuyển' });
+  const board = await (await zoomed.isVisible() ? zoomed : page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).boundingBox();
   expect(status && score && board).toBeTruthy();
   expect(status!.y).toBeGreaterThan(board!.y + board!.height);
   expect(score!.y).toBeGreaterThan(status!.y + status!.height);
@@ -54,8 +56,7 @@ test('mobile keeps the board above status and actions without page overflow', as
 test('fixed mobile board stays in one short viewport when zoomed', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 667 });
   await mockGuestMatch(page, true);
-  await expect(page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).toBeVisible();
-  await page.getByRole('button', { name: 'Phóng bàn cờ' }).click();
+  await openZoomedBoard(page);
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(667);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
@@ -73,7 +74,7 @@ test('replay keeps the board frame and controls in one short mobile viewport', a
   await page.goto(`/history/${gameId}?scope=guest`);
   await expect(page.getByText('Bước 0 / 1')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(667);
-  await page.getByRole('button', { name: 'Phóng bàn cờ' }).click();
+  await openZoomedBoard(page);
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(667);
   await page.setViewportSize({ width: 320, height: 568 });
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(568);
@@ -85,8 +86,7 @@ for (const width of [360, 390, 430, 1280, 1440, 2048]) {
     await mockGuestMatch(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     if (width < 800) {
-      await expect(page.getByRole('button', { name: 'Phóng bàn cờ' })).toBeVisible();
-      await page.getByRole('button', { name: 'Phóng bàn cờ' }).click();
+      await openZoomedBoard(page);
       const cell = page.getByRole('gridcell', { name: 'Hàng 11, cột 11, ô trống' });
       const box = await cell.boundingBox();
       expect(box?.width).toBeGreaterThanOrEqual(40);
@@ -100,7 +100,7 @@ test('landscape and 200% page zoom keep board actions reachable', async ({ page 
   await page.setViewportSize({ width: 740, height: 360 });
   const moves = await mockGuestMatch(page);
   await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
-  await page.getByRole('button', { name: 'Phóng bàn cờ' }).click();
+  await openZoomedBoard(page);
   const cell = page.getByRole('gridcell', { name: 'Hàng 11, cột 11, ô trống' });
   await cell.click();
   await expect.poll(() => moves.length).toBe(1);
@@ -112,7 +112,7 @@ test('touch selects exactly one zoomed cell', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Touchscreen is configured in the mobile project');
   await page.setViewportSize({ width: 390, height: 844 });
   const moves = await mockGuestMatch(page);
-  await page.getByRole('button', { name: 'Phóng bàn cờ' }).click();
+  await openZoomedBoard(page);
   const cell = page.getByRole('gridcell', { name: 'Hàng 11, cột 11, ô trống' });
   await cell.scrollIntoViewIfNeeded();
   const box = await cell.boundingBox();
