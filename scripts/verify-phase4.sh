@@ -37,7 +37,18 @@ export GOMOKU_E2E_BASE_URL="http://127.0.0.1:$GOMOKU_API_PORT"
 
 cleanup() {
   result=$?
-  if (( result != 0 )); then docker compose logs --no-color >"$log_dir/compose.log" 2>&1 || true; fi
+  if (( result != 0 )); then
+    # Show the failing step's log right in the CI output instead of only a bare "exit code 1".
+    failed_log="$(ls -t "$log_dir"/*.log 2>/dev/null | head -1 || true)"
+    if [[ -n "$failed_log" ]]; then
+      echo "::group::Failed step log: $(basename "$failed_log") (last 80 lines)"
+      tail -n 80 "$failed_log" | sed -E 's/\x1b\[[0-9;]*m//g' || true
+      echo "::endgroup::"
+      grep -hE "✘|Error:|Expected|Received|FAIL|error " "$failed_log" | sed -E 's/\x1b\[[0-9;]*m//g' | head -20 |
+        while IFS= read -r line; do echo "::error title=$(basename "$failed_log")::$line"; done || true
+    fi
+    docker compose logs --no-color >"$log_dir/compose.log" 2>&1 || true
+  fi
   docker compose down --volumes --remove-orphans >"$log_dir/cleanup.log" 2>&1 || true
   echo "Phase 4 logs: $log_dir"
   exit "$result"
