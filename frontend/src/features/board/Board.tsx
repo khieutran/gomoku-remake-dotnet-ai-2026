@@ -21,9 +21,12 @@ export function Board(props: BoardProps) {
     observer.observe(element);
     return () => observer.disconnect();
   }, [props.preview]);
-  // Small mouse targets remain playable; coarse pointers use the zoomed 44px cells.
+  // Touch screens need 40px+ cells and otherwise play on the zoomed board. A mouse is precise: it plays
+  // directly down to 16px cells (a narrow desktop window), with zoom offered below 28px for comfort.
   const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-  const compact = (width - 4) / (props.columns ?? props.size) < (coarsePointer ? 40 : 28);
+  const cell = (width - 4) / (props.columns ?? props.size);
+  const compact = cell < (coarsePointer ? 40 : 28);
+  const playable = cell >= (coarsePointer ? 40 : 16);
   function closeZoom() {
     restoreZoomFocus.current = true;
     setZoomed(false);
@@ -36,7 +39,7 @@ export function Board(props: BoardProps) {
       {placeZoomControl(<button type="button" className="gomoku-zoom-button" onClick={closeZoom}>Toàn cảnh</button>)}
       <p className="gomoku-board-help">Vuốt hoặc cuộn để di chuyển. Dùng phím mũi tên, Enter hoặc Space để đặt quân.</p>
       <ZoomableBoard {...props} />
-    </> : compact ? <>
+    </> : compact && !playable ? <>
       <BoardOverview {...props} />
       <p className="gomoku-board-help sr-only">Bàn tổng quan. Phóng to để chọn ô chính xác.</p>
     </> : <BoardGrid {...props} />}
