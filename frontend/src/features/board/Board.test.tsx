@@ -80,19 +80,17 @@ describe('Board', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Toàn cảnh' }));
     expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toHaveFocus();
   });
-  it('requires 28px mouse cells before enabling inline interaction', () => {
+  it('lets a mouse play small cells directly in a narrow window and keeps zoom as an option', () => {
     const onMove = vi.fn();
     render(<Board size={20} moves={[]} interactive onMove={onMove} />);
     width(500);
-    fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
-    expect(onMove).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toBeInTheDocument();
-    width(563);
-    expect(screen.getByRole('button', { name: 'Phóng bàn cờ' })).toBeInTheDocument();
-    width(600);
-    expect(screen.queryByRole('button', { name: 'Phóng bàn cờ' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 1, ô trống' }));
     expect(onMove).toHaveBeenCalledExactlyOnceWith(0, 0);
+    width(600);
+    expect(screen.queryByRole('button', { name: 'Phóng bàn cờ' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('gridcell', { name: 'Hàng 1, cột 2, ô trống' }));
+    expect(onMove).toHaveBeenLastCalledWith(0, 1);
   });
   it('overview never submits a move', () => {
     const onMove = vi.fn();

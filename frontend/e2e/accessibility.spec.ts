@@ -21,7 +21,7 @@ test('keyboard opens board, moves focus, and activates one labeled cell', async 
   await expect(page.getByRole('status')).toContainText('Bot đang suy nghĩ');
 });
 
-test('reduced motion disables decorative motion and focus remains visible', async ({ page }) => {
+test('reduced motion disables decorative motion and focus remains visible', async ({ page, isMobile }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });
   await mockGuestMatch(page);
@@ -31,5 +31,6 @@ test('reduced motion disables decorative motion and focus remains visible', asyn
   await zoom.focus();
   expect(await zoom.evaluate(element => getComputedStyle(element).outlineStyle)).not.toBe('none');
   expect(await zoom.evaluate(element => getComputedStyle(element).transitionDuration)).toBe('0s');
-  await expect(page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).toHaveAttribute('aria-readonly', 'true');
+  // The overview is read-only on touch screens; a mouse still plays its ~17px cells directly.
+  await expect(page.getByRole('grid', { name: 'Bàn cờ 20 nhân 20' })).toHaveAttribute('aria-readonly', isMobile ? 'true' : 'false');
 });
