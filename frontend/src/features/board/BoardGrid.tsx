@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { BoardProps } from './Board';
 import { useBoardKeyboard } from './useBoardKeyboard';
 
@@ -11,6 +11,15 @@ export function BoardGrid({ size, columns = size, moves, interactive, onMove, wi
   useEffect(() => {
     if (autoFocus) cells.current.get(`${initial.row}:${initial.column}`)?.focus();
   }, [autoFocus, cells, initial]);
+  // The board mounts empty while a match loads; once its moves arrive, start from the last move, not the centre.
+  const placed = useRef(moves.length > 0);
+  useEffect(() => {
+    if (placed.current || !last) return;
+    placed.current = true;
+    setFocused({ row: last.row, column: last.column });
+    // ZoomableBoard scrolls to the move itself, smoothly and centred.
+    if (autoFocus) cells.current.get(`${last.row}:${last.column}`)?.focus({ preventScroll: true });
+  }, [autoFocus, cells, last, setFocused]);
   return <div className={`gomoku-grid${overview ? ' gomoku-grid--overview' : ''}`} style={{ '--board-rows': size, '--board-columns': columns } as CSSProperties} role="grid" aria-label={`Bàn cờ ${size} nhân ${columns}`} aria-rowcount={size} aria-colcount={columns} aria-readonly={!interactive || overview}>
     {Array.from({ length: size }, (_, row) => <div className="gomoku-row" role="row" key={row}>
       {Array.from({ length: columns }, (_, column) => {

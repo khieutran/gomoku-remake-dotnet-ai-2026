@@ -45,5 +45,5 @@ export function OwnerGate({ scope, children }: { scope: 'account' | 'guest'; chi
     setGuestError(false);
     try { await chooseGuest(); } catch { setGuestError(true); } finally { setBusy(false); }
   }
-  return <><p>Ván khách được lưu lâu dài và chỉ phiên khách hiện tại có quyền xem lại. Ván này không chuyển vào tài khoản khi đăng nhập.</p><button type="button" className="button button-primary" disabled={busy} onClick={() => void startGuest()}>{busy ? 'Đang mở phiên…' : 'Bắt đầu chơi khách'}</button>{guestError && <p role="alert">Chưa mở được phiên khách. Hãy thử lại.</p>}</>;
+  return <><p>Phiên khách giữ 30 ngày trên thiết bị này và chỉ phiên đó xem lại được ván của mình. Đăng nhập sau không chuyển ván khách vào tài khoản.</p><button type="button" className="button button-primary" disabled={busy} onClick={() => void startGuest()}>{busy ? 'Đang mở phiên…' : 'Bắt đầu chơi khách'}</button>{guestError && <p role="alert">Chưa mở được phiên khách. Hãy thử lại.</p>}</>;
 }

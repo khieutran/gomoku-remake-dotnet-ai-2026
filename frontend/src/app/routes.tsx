@@ -75,10 +75,10 @@ function EntryPage() {
           </div>
         </section>
       </div>
-      <details className="entry-mobile-note"><summary>Ván khách được lưu thế nào?</summary><p>Ván khách được lưu lâu dài để cải thiện AI. Chỉ phiên khách này có quyền xem lại; đăng nhập sau không chuyển ván khách vào tài khoản.</p></details>
+      <details className="entry-mobile-note"><summary>Ván khách được lưu thế nào?</summary><p>Phiên khách giữ 30 ngày trên thiết bị này và chỉ phiên đó xem lại được ván của mình. Đăng nhập sau không chuyển ván khách vào tài khoản.</p></details>
     </Window>}
     top={<Window title="Cách chơi"><div className="entry-stones" aria-hidden="true"><span>{stone}</span><span>{stone === 'X' ? 'O' : 'X'}</span></div><p>Bạn cầm {stone}, bot cầm {stone === 'X' ? 'O' : 'X'}. {first ? 'Bạn đánh trước.' : 'Bot đánh trước.'} Tạo đúng năm quân liên tiếp để thắng.</p></Window>}
-    bottom={<Window title="Lưu ván"><p className="guest-note">Ván khách được lưu lâu dài để cải thiện AI. Chỉ phiên khách này có quyền xem lại; đăng nhập sau không chuyển ván khách vào tài khoản.</p><Link className="button" to="/history">Xem lịch sử</Link></Window>}
+    bottom={<Window title="Lưu ván"><p className="guest-note">Phiên khách giữ 30 ngày trên thiết bị này và chỉ phiên đó xem lại được ván của mình. Đăng nhập sau không chuyển ván khách vào tài khoản.</p><Link className="button" to="/history">Xem lịch sử</Link></Window>}
   />;
 }
 function PlayEntry() {

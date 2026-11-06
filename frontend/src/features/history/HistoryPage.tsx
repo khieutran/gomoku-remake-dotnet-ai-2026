@@ -61,7 +61,7 @@ function HistoryContent({ scope, identity }: { scope: OwnerScope; identity: Owne
     <section className="history-player" aria-label="Người chơi">
       <span className="history-player-mark" aria-hidden="true">X O</span>
       <div><span className="history-player-label">Người chơi</span>
-        <strong>{scope === 'account' && session.scope === 'account' ? session.email ?? 'Tài khoản của bạn' : 'Khách'}</strong>
+        <strong>{scope === 'account' && session.scope === 'account' ? session.displayName ?? session.email ?? 'Tài khoản của bạn' : 'Khách'}</strong>
         <small>{scope === 'account' ? 'Lịch sử gắn với tài khoản của bạn' : 'Lịch sử của phiên khách hiện tại'}</small>
       </div>
     </section>
