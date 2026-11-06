@@ -395,3 +395,12 @@ it('shows an error instead of loading forever when match creation fails before a
   expect(await screen.findByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
   expect(screen.queryByText('Đang mở ván…')).not.toBeInTheDocument();
 });
+
+it('opens a resumed game on the last move on touch screens, not the centre of the board', async () => {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('coarse'), media: query,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
+  setup(path => path.includes(`/${matchId}`) ? json(oMove) : error('unexpected', 500), matchId);
+  const lastMove = await screen.findByRole('gridcell', { name: /Hàng 1, cột 2, quân O/ });
+  expect(lastMove).toHaveAttribute('tabindex', '0');
+  expect(lastMove).toHaveFocus();
+});
