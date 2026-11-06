@@ -123,3 +123,11 @@ it('says guest play on the home screen for a guest session', async () => {
   renderApp();
   expect(await screen.findByText('Đang chơi khách')).toBeInTheDocument();
 });
+
+it('describes guest saves without the retired AI training promise', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'authentication_required', message: 'Sign in.' }), { status: 401 })));
+  renderApp();
+  await screen.findByRole('heading', { name: /Thử sức nếu bạn dám!/ });
+  expect(document.body).not.toHaveTextContent('cải thiện AI');
+  expect(document.body).toHaveTextContent('30 ngày');
+});

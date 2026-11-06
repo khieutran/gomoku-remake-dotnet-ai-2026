@@ -151,3 +151,14 @@ it('replays sorted steps without mutating the received game or sending moves', a
   expect(moves.map(move => move.step)).toEqual([2, 1]);
   expect(requests).toEqual([`/api/v1/history/${game1}?scope=account`]);
 });
+
+it('shows the display name instead of the email, and falls back to the email for older accounts', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => json({ items: [], nextCursor: null, url })));
+  const named = renderFeature(<HistoryPage scope="account" />, { scope: 'account', ownerId, email: 'kio@example.com', displayName: 'Kiô Trần' });
+  const player = await screen.findByRole('region', { name: 'Người chơi' });
+  expect(player).toHaveTextContent('Kiô Trần');
+  expect(player).not.toHaveTextContent('kio@example.com');
+  named.unmount();
+  renderFeature(<HistoryPage scope="account" />, { scope: 'account', ownerId, email: 'kio@example.com', displayName: null });
+  expect(await screen.findByRole('region', { name: 'Người chơi' })).toHaveTextContent('kio@example.com');
+});
