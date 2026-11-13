@@ -34,8 +34,9 @@ app.Use(async (context, next) =>
         headers["X-Content-Type-Options"] = "nosniff";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         headers["Content-Security-Policy"] =
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
-            "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+            // stats.kiotrandev.tech: script thống kê truy cập (site-stats), chỉ tải script và gửi tín hiệu.
+            "default-src 'self'; script-src 'self' https://stats.kiotrandev.tech; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+            "font-src 'self'; connect-src 'self' https://stats.kiotrandev.tech; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
         if (context.Request.Path.StartsWithSegments("/api") ||
             context.Request.Path.StartsWithSegments("/health") ||
             context.Request.Path.StartsWithSegments("/ready"))
