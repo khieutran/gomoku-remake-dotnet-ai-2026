@@ -136,7 +136,8 @@ public sealed class WebHostingTests
             Assert.Equal("strict-origin-when-cross-origin", response.Headers.GetValues("Referrer-Policy").Single());
             var csp = response.Headers.GetValues("Content-Security-Policy").Single();
             Assert.Contains("default-src 'self'", csp);
-            Assert.Contains("script-src 'self'", csp);
+            Assert.Contains("script-src 'self' https://stats.kiotrandev.tech;", csp);
+            Assert.Contains("connect-src 'self' https://stats.kiotrandev.tech;", csp);
             Assert.Contains("object-src 'none'", csp);
         }
         Assert.Contains("private", api.Headers.GetValues("Cache-Control").Single());
