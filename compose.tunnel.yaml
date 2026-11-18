@@ -36,6 +36,32 @@ services:
       tunnel:
         ipv4_address: 172.30.66.10
 
+  # Daily database dump into ./backups next to the compose files, newest 7 kept (ops/db-backup.sh).
+  # Turns "unhealthy" in `docker compose ps` when the newest backup is missing or older than 26 hours.
+  backup:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: gomoku
+      PGDATABASE: gomoku
+      PGPASSWORD: ${GOMOKU_POSTGRES_PASSWORD:?set GOMOKU_POSTGRES_PASSWORD in .env}
+      BACKUP_KEEP: 7
+      BACKUP_EVERY_HOURS: 24
+    volumes:
+      - ./backups:/backups
+      # The whole directory, not the file: an editor that replaces the file would leave the container on the old copy.
+      - ./ops:/ops:ro
+    entrypoint: ["sh", "-c", "while true; do sh /ops/db-backup.sh --if-due || true; sleep 3600; done"]
+    healthcheck:
+      test: ["CMD", "sh", "/ops/db-backup.sh", "--health"]
+      interval: 5m
+      timeout: 10s
+      start_period: 2m
+
 networks:
   tunnel:
     ipam:

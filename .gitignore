@@ -46,3 +46,6 @@ training/tests/__pycache__/
 # Android LAN test build
 frontend/.android-lan-shell/
 artifacts/android/
+
+# Database backups written by the backup service (compose.tunnel.yaml)
+backups/

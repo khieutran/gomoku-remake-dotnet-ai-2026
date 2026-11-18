@@ -192,6 +192,22 @@ Script build trên máy local, chỉ upload phần ứng dụng (khoảng 40 MB)
 
 Mỗi tunnel chỉ chạy trên một máy, nếu không Cloudflare sẽ chia người chơi cho cả hai máy.
 
+**Phiên bản và quay lui.** Mỗi lần deploy, image được gắn tag theo commit (`gomoku-api:<commit>`) và ghi vào `~/gomoku/releases` trên VM. VM giữ 3 bản gần nhất. Quay lui không cần build:
+
+```bash
+bash scripts/deploy-vm.sh azureuser@<ip-vm> --rollback          # về bản chạy trước bản hiện tại
+bash scripts/deploy-vm.sh azureuser@<ip-vm> --rollback <commit> # về một bản cụ thể còn trên VM
+```
+
+Quay lui chỉ đổi image của API, không đụng database. Nếu bản mới đã chạy migration mà code cũ không đọc được, cần khôi phục database từ bản sao lưu.
+
+**Sao lưu database.** Dịch vụ `backup` trong `compose.tunnel.yaml` dump database mỗi 24 giờ vào `~/gomoku/backups/` trên VM, giữ 7 bản ([`ops/db-backup.sh`](ops/db-backup.sh)). Bản sao lưu quá 26 giờ thì `docker compose ps` báo `unhealthy`. Lấy bản mới nhất về máy (nên làm định kỳ, vì VM hỏng thì bản sao lưu trên VM cũng mất):
+
+```bash
+bash scripts/deploy-vm.sh azureuser@<ip-vm> --fetch-backup      # chép vào ~/Documents/Gomoku-backups
+pg_restore -U gomoku -d gomoku --clean --if-exists --no-owner <file.dump>   # khôi phục (trong container postgres)
+```
+
 Repo cũng có [`compose.production.yaml`](compose.production.yaml) dùng Caddy cho máy chủ mở port 80/443.
 
 ### CI
